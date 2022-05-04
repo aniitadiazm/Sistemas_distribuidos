@@ -5,6 +5,7 @@ import uuid
 
 import Ice
 import IceStorm
+import random
 
 import IceFlix
 from iceflix.service_announcement import (
@@ -12,33 +13,39 @@ from iceflix.service_announcement import (
     ServiceAnnouncementsSender,
 )
 
+TOKEN_ADMIN="admin"
+
 
 class Main(IceFlix.Main):
-    """Servant for the IceFlix.Main interface.
-
+    
+    """ Servant for the IceFlix.Main interface.
     Disclaimer: this is demo code, it lacks of most of the needed methods
-    for this interface. Use it with caution
-    """
+    for this interface. Use it with caution """
 
     def __init__(self):
-        """Create the Main servant instance."""
+        
+        """ Create the Main servant instance """
+        
         self.service_id = str(uuid.uuid4())
 
     def share_data_with(self, service):
-        """Share the current database with an incoming service."""
+        
+        """ Share the current database with an incoming service """
+        
         service.updateDB(None, self.service_id)
 
-    def updateDB(
-        self, values, service_id, current
-    ):  # pylint: disable=invalid-name,unused-argument
-        """Receives the current main service database from a peer."""
+    def updateDB(self, values, service_id, current):  # pylint: disable=invalid-name,unused-argument
+        
+        """ Receives the current main service database from a peer """
+        
         logging.info(
             "Receiving remote data base from %s to %s", service_id, self.service_id
         )
 
 
 class MainApp(Ice.Application):
-    """Example Ice.Application for a Main service."""
+    
+    """ Example Ice.Application for a Main service """
 
     def __init__(self):
         super().__init__()
@@ -49,7 +56,8 @@ class MainApp(Ice.Application):
         self.subscriber = None
 
     def setup_announcements(self):
-        """Configure the announcements sender and listener."""
+        
+        """ Configure the announcements sender and listener """
 
         communicator = self.communicator()
         topic_manager = IceStorm.TopicManagerPrx.checkedCast(
@@ -75,7 +83,9 @@ class MainApp(Ice.Application):
         topic.subscribeAndGetPublisher({}, subscriber_prx)
 
     def run(self, args):
-        """Run the application, adding the needed objects to the adapter."""
+        
+        """ Run the application, adding the needed objects to the adapter """
+        
         logging.info("Running Main application")
         comm = self.communicator()
         self.adapter = comm.createObjectAdapter("Main")
@@ -91,3 +101,34 @@ class MainApp(Ice.Application):
 
         self.announcer.stop()
         return 0
+    
+    def isAdmin(self, adminToken, current=None):
+        
+        """ Devuelve si un determinado token es o no el token de administración """
+        
+        print(adminToken)
+        if adminToken == TOKEN_ADMIN:
+            return True
+        return False
+    
+    def getAuthenticator(self, current=None):
+        
+        """ Devuelve una referencia a objeto remoto de autenticación,
+        obteniéndola aleatoriamente de los mapas de los proxies descubiertos"""
+        
+        active=False
+        while self.volatileServices.authenticators != [] and active is False:
+            randomAuth=random.choice(self.volatileServices.authenticators)
+            
+            try:
+                randomAuth.ice_ping()
+                active=True
+            except:
+                active=False
+                self.volatileServices.authenticators.remove(randomAuth)
+        
+        if self.volatileServices.authenticators == []:
+            raise IceFlix.TemporaryUnavailable
+        
+        checked = IceFlix.AuthenticatorPrx.checkedCast(randomAuth)
+        return checked
