@@ -104,7 +104,8 @@ class MainApp(Ice.Application):
     
     def isAdmin(self, adminToken, current=None):
         
-        """ Devuelve si un determinado token es o no el token de administración """
+        """ Devuelve un valor booleano para comprobar si el token proporcionado
+        corresponde o no con el administrativo """
         
         print(adminToken)
         if adminToken == TOKEN_ADMIN:
@@ -113,18 +114,17 @@ class MainApp(Ice.Application):
     
     def getAuthenticator(self, current=None):
         
-        """ Devuelve una referencia a objeto remoto de autenticación,
-        obteniéndola aleatoriamente de los mapas de los proxies descubiertos"""
+        """ Devuelve un proxy a un servicio de autenticación """
         
-        active=False
+        active = False
         while self.volatileServices.authenticators != [] and active is False:
-            randomAuth=random.choice(self.volatileServices.authenticators)
+            randomAuth = random.choice(self.volatileServices.authenticators)
             
             try:
                 randomAuth.ice_ping()
-                active=True
+                active = True
             except:
-                active=False
+                active = False
                 self.volatileServices.authenticators.remove(randomAuth)
         
         if self.volatileServices.authenticators == []:
@@ -132,3 +132,28 @@ class MainApp(Ice.Application):
         
         checked = IceFlix.AuthenticatorPrx.checkedCast(randomAuth)
         return checked
+    
+    def getCatalog(self, current=None):
+        
+        """ Devuelve un proxy a un servicio de catálogo """
+        
+        active = False
+        while self.volatileServices.mediaCatalogs != [] and active is False:
+            randomCatalog = random.choice(self.volatileServices.mediaCatalogs)
+           
+            try:
+                randomCatalog.ice_ping()
+                active = True
+            except:
+                active = False
+                self.volatileServices.mediaCatalogs.remove(randomCatalog)
+       
+        if self.volatileServices.mediaCatalogs == []:
+            raise IceFlix.TemporaryUnavailable
+        
+        checked = IceFlix.MediaCatalogPrx.checkedCast(randomCatalog)
+        return checked
+
+    def updateDB(self, currentDataBase, srvId, current=None):
+
+        """ Actualiza la base de datos de la instancia con los usuarios y tokens más recientes """

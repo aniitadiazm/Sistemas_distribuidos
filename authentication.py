@@ -33,7 +33,7 @@ TOKEN_SIZE = 40
 
 def build_new_token():
 
-    """ MÈtodo para construir un nuevo token """
+    """ M√©todo para construir un nuevo token """
     
     token = string.ascii_uppercase + string.digits + string.ascii_lowercase
     return ''.join([random.choice(token) for _ in range(TOKEN_SIZE)])
@@ -41,7 +41,7 @@ def build_new_token():
 
 class AuthenticatorInterface(IceFlix.Authenticator):
 
-    """ Clase que act˙a como servidor de autenticaciÛn """
+    """ Clase que act√∫a como servidor de autenticaci√≥n """
 
     def __init__(self):
 
@@ -65,7 +65,7 @@ class AuthenticatorInterface(IceFlix.Authenticator):
 
     def commitChanges(self):
 
-        """ Recarga los posibles cambios realizados sobre el almacÈn de datos """
+        """ Recarga los posibles cambios realizados sobre el almac√©n de datos """
 
         logging.debug('User database updated')
         with open(USERS_FILE, 'w') as contents:
@@ -73,7 +73,7 @@ class AuthenticatorInterface(IceFlix.Authenticator):
 
     def refreshAuthorization(self, user, passwordHash, current=None):
 
-        """ Crea un nuevo token de autorizaciÛn de usuario si las credenciales son v·lidas """
+        """ Crea un nuevo token de autorizaci√≥n de usuario si las credenciales son v√°lidas """
 
         logging.debug(f'New token requested by {user}')
         if user not in self.users:
@@ -81,7 +81,7 @@ class AuthenticatorInterface(IceFlix.Authenticator):
 
         current_hash = self.users[user].get(PASSWORD_HASH, None)
 
-        if not current_hash:  # Si est· vacÌo
+        if not current_hash:
             raise IceFlix.Unauthorized()
 
         if current_hash != passwordHash:
@@ -97,13 +97,13 @@ class AuthenticatorInterface(IceFlix.Authenticator):
 
     def isAuthorized(self, userToken, current=None):
 
-        """ Indica si un token dado es v·lido o no """
+        """ Indica si un token dado es v√°lido o no """
 
         return True if userToken in self.active_tokens else False
 
     def whois(self, userToken, current=None):
 
-        """ Permite descubrir el nombre del usuario a partir de un token v·lido """
+        """ Permite descubrir el nombre del usuario a partir de un token v√°lido """
 
         if userToken not in self.users.usersToken:
             raise IceFlix.Unauthorized
@@ -112,19 +112,19 @@ class AuthenticatorInterface(IceFlix.Authenticator):
 
     def addUser(self, username, passwordHash, adminToken, current=None):
 
-        """ Permite aÒadir unas nuevas credenciales en el almacÈn de datos
+        """ Permite a√±adir unas nuevas credenciales en el almac√©n de datos
         si el token administrativo es correcto """
 
 
 
-    def removeUser(self,username,adminToken, current=None):
+    def removeUser(self, username, adminToken, current=None):
 
-        """ Permite eliminar unas credenciales del almacÈn de datos
+        """ Permite eliminar unas credenciales del almac√©n de datos
         si el token administrativo es correcto """
 
         
 
-    def updateDB(self,currentDataBase,srvId,current=None):
+    def updateDB(self, currentDataBase, srvId, current=None):
 
-        """ Actualiza la base de datos de la instancia con los usuarios y tokens m·s recientes """
+        """ Actualiza la base de datos de la instancia con los usuarios y tokens m√°s recientes """
 
