@@ -110,6 +110,7 @@ class MainApp(Ice.Application):
         print(adminToken)
         if adminToken == TOKEN_ADMIN:
             return True
+        
         return False
     
     def getAuthenticator(self, current=None):
@@ -117,20 +118,23 @@ class MainApp(Ice.Application):
         """ Devuelve un proxy a un servicio de autenticación """
         
         active = False
-        while self.volatileServices.authenticators != [] and active is False:
-            randomAuth = random.choice(self.volatileServices.authenticators)
+        while active is False:
             
-            try:
-                randomAuth.ice_ping()
+            if self.volatileServices.authenticators != []:    
+                randomAuth = random.choice(self.volatileServices.authenticators)  # Selecciona un aleatorio de la lista
+                
+                try:
+                    randomAuth.ice_ping()  # Si el objeto existe y se le puede mandar un mensaje
+                    active = True
+                    
+                except:
+                    self.volatileServices.authenticators.remove(randomAuth)
+        
+            else:
                 active = True
-            except:
-                active = False
-                self.volatileServices.authenticators.remove(randomAuth)
+                raise IceFlix.TemporaryUnavailable
         
-        if self.volatileServices.authenticators == []:
-            raise IceFlix.TemporaryUnavailable
-        
-        checked = IceFlix.AuthenticatorPrx.checkedCast(randomAuth)
+        checked = IceFlix.AuthenticatorPrx.checkedCast(randomAuth)  # Si el servidor está asociado a la interfaz devuelve el proxy, sino None
         return checked
     
     def getCatalog(self, current=None):
@@ -138,20 +142,23 @@ class MainApp(Ice.Application):
         """ Devuelve un proxy a un servicio de catálogo """
         
         active = False
-        while self.volatileServices.mediaCatalogs != [] and active is False:
-            randomCatalog = random.choice(self.volatileServices.mediaCatalogs)
-           
-            try:
-                randomCatalog.ice_ping()
-                active = True
-            except:
-                active = False
-                self.volatileServices.mediaCatalogs.remove(randomCatalog)
+        while active is False:
+            
+            if self.volatileServices.mediaCatalogs != []:                
+                randomCatalog = random.choice(self.volatileServices.mediaCatalogs)  # Selecciona un aleatorio de la lista
+            
+                try:
+                    randomCatalog.ice_ping()  # Comprobar que el objeto existe y recibe mensajes
+                    active = True
+                
+                except:
+                    self.volatileServices.mediaCatalogs.remove(randomCatalog)
        
-        if self.volatileServices.mediaCatalogs == []:
-            raise IceFlix.TemporaryUnavailable
+            else:
+                active = True
+                raise IceFlix.TemporaryUnavailable
         
-        checked = IceFlix.MediaCatalogPrx.checkedCast(randomCatalog)
+        checked = IceFlix.MediaCatalogPrx.checkedCast(randomCatalog)  # Si el servidor está asociado a la interfaz devuelve el proxy, sino None
         return checked
 
     def updateDB(self, currentDataBase, srvId, current=None):

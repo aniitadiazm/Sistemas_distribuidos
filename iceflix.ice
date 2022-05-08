@@ -156,8 +156,8 @@
     sequence<MediaCatalog*> MediaCatalogList;
 
     struct VolatileServices {
-        AuthenticatorList authenticators;
-        MediaCatalogList mediaCatalogs;
+        AuthenticatorList authenticators;  # utilizado en getAuthenticator()
+        MediaCatalogList mediaCatalogs;  # utilizado en getCatalog()
     };
 
     interface Main {
