@@ -63,22 +63,24 @@ class AuthenticatorInterface(IceFlix.Authenticator):
         logging.debug('Cargando los tokens de los usuarios')
         
         with open(USERS_FILE, 'r') as contents:
-            self.users = json.load(contents)
-            self.active_tokens = set([user.get(CURRENT_TOKEN, None) for user in self.users.values()])
+            self.users = json.load(contents)  # Cargar el contenido del json en users
+            self.active_tokens = set([user.get(CURRENT_TOKEN, None) for user in self.users.values()])  # Para cada uno de los usuarios, obtener su token
 
     def commitChanges(self):
 
         """ Recarga los posibles cambios realizados sobre el almacén de datos """
 
-        logging.debug('User database updated')
+        logging.debug('Actualizando el almacén de datos')
+        
         with open(USERS_FILE, 'w') as contents:
-            json.dump(self.users, contents, indent=4, sort_keys=True)
+            json.dump(self.users, contents, indent = 4, sort_keys = True)  # Serializar los usuarios en el archivo contents, con indentación 4 y ordenados por su clave
 
-    def refreshAuthorization(self, user, passwordHash, current=None):
+    def refreshAuthorization(self, user, passwordHash, current = None):
 
         """ Crea un nuevo token de autorización de usuario si las credenciales son válidas """
 
-        logging.debug(f'New token requested by {user}')
+        logging.debug(f'Nuevo token solicitado por {user}')
+        
         if user not in self.users:
             raise IceFlix.Unauthorized()
 
@@ -98,13 +100,13 @@ class AuthenticatorInterface(IceFlix.Authenticator):
 
         return new_token
 
-    def isAuthorized(self, userToken, current=None):
+    def isAuthorized(self, userToken, current = None):
 
         """ Indica si un token dado es válido o no """
 
         return True if userToken in self.active_tokens else False
 
-    def whois(self, userToken, current=None):
+    def whois(self, userToken, current = None):
 
         """ Permite descubrir el nombre del usuario a partir de un token válido """
 
@@ -113,21 +115,44 @@ class AuthenticatorInterface(IceFlix.Authenticator):
 
         return users.usersToken[userToken]
 
-    def addUser(self, username, passwordHash, adminToken, current=None):
+    def addUser(self, username, passwordHash, adminToken, current = None):
 
         """ Permite añadir unas nuevas credenciales en el almacén de datos
         si el token administrativo es correcto """
 
+        active = False
+        while active is False:
+            if self.se.mainServices != {}:
+            
+                randomMain = random.choice(list(self.se.mainServices.values()))   # Selecciona un aleatorio del diccionario
+                
+                try:
+                    randomMain.ice_ping()  # Comprobar que el objeto existe y recibe mensajes
+                    active = True
+                    
+                except:
+                    del self.se.mainServices[randomMain]  # Elimnar el objeto randomMain del diccionario
+            
+            else:
+                active = True
+                raise IceFlix.TemporaryUnavailable
 
+        checked = IceFlix.MainPrx.checkedCast(randomMain)  # Si el servidor está asociado a la interfaz devuelve el proxy, sino None
+        
+        if checked.isAdmin(adminToken):  # Si el token administrativo es correcto
+            self.userUpdatePublisher.newUser(username, passwordHash, self.srvId)  # Crear el nuevo usuario en el almacén de datos
+            
+        else:
+            raise IceFlix.Unauthorized
 
-    def removeUser(self, username, adminToken, current=None):
+    def removeUser(self, username, adminToken, current = None):
 
         """ Permite eliminar unas credenciales del almacén de datos
         si el token administrativo es correcto """
 
         
 
-    def updateDB(self, currentDataBase, srvId, current=None):
+    def updateDB(self, currentDataBase, srvId, current = None):
 
         """ Actualiza la base de datos de la instancia con los usuarios y tokens más recientes """
 
