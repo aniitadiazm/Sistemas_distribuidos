@@ -28,40 +28,43 @@ USERS_FILE = 'users.json'
 
 CURRENT_TOKEN = 'current_token'
 PASSWORD_HASH = 'password_hash'
-TOKEN_SIZE = 40
+TOKEN_SIZE = 30
 
 
 def build_new_token():
 
-    """ Método para construir un nuevo token """
+    """ Construye un nuevo token """
     
-    token = string.ascii_uppercase + string.digits + string.ascii_lowercase
-    return ''.join([random.choice(token) for _ in range(TOKEN_SIZE)])
+    letters_digits = string.ascii_letters + string.digits  # Letras mayúsculas (A-Z), minúsculas (a-z) y números (0-9)
+    token = ''.join([random.choice(letters_digits) for _ in range(TOKEN_SIZE)])  # Seleccionando aleatoriamente, crear string de longitud 30
+   
+    return token
 
 
 class AuthenticatorInterface(IceFlix.Authenticator):
 
-    """ Clase que actúa como servidor de autenticación """
+    """ Actúa como servidor de autenticación """
 
     def __init__(self):
 
         self.users = {}
         self.active_tokens = set()
 
-        if os.path.exists(USERS_FILE):
-            self.refreshAuthorization()
+        if os.path.exists(USERS_FILE): 
+            self.refresh()  # Recargar los tokens
+            
         else:
-            self.commitChanges()
+            self.commitChanges()  # Recargar los cambios realizados sobre el almacén de datos
 
     def refresh(self):
         
         """ Recarga los tokens de los usuarios """
 
-        logging.debug('Reloading user database')
-        with open(USERS_FILE, 'r', encoding='utf-8') as contents:
+        logging.debug('Cargando los tokens de los usuarios')
+        
+        with open(USERS_FILE, 'r') as contents:
             self.users = json.load(contents)
             self.active_tokens = set([user.get(CURRENT_TOKEN, None) for user in self.users.values()])
-            print(self.active_tokens)
 
     def commitChanges(self):
 
