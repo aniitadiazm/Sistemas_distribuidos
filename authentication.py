@@ -150,6 +150,18 @@ class AuthenticatorInterface(IceFlix.Authenticator):
         """ Permite eliminar unas credenciales del almacén de datos
         si el token administrativo es correcto """
 
+        active = False
+        while active is False:
+            if self.se.mainServices != {}:
+            
+            else:
+                active = True
+                raise IceFlix.TemporaryUnavailable
+        
+        if checked.isAdmin(adminToken):
+        
+        else:
+            raise IceFlix.Unauthorized
         
 
     def updateDB(self, currentDataBase, srvId, current = None):
