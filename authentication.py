@@ -174,7 +174,15 @@ class AuthenticatorInterface(IceFlix.Authenticator):
             raise IceFlix.Unauthorized
         
 
-    def updateDB(self, currentDataBase, srvId, current = None):
+    def updateDB(self, currentDataBase, service_id, current = None):
 
         """ Actualiza la base de datos de la instancia con los usuarios y tokens más recientes """
 
+        print(self.serviceAnnouncements.se.authServices)
+        
+        if self.ServiceAnnouncementsListener.announce(service_id,"Authenticator"):
+            self.users = currentDataBase
+            print(self.users)
+        
+        else:
+            print("Error al obtener la base de datos")
