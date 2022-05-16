@@ -153,12 +153,22 @@ class AuthenticatorInterface(IceFlix.Authenticator):
         active = False
         while active is False:
             if self.se.mainServices != {}:
+                
+                randomMain = random.choice(list(self.se.mainServices.values()))
+                
+                try:
+                    randomMain.ice_ping()
+                    active = True
+                    
+                except:
+                    del self.se.mainServices[randomMain]
             
             else:
                 active = True
                 raise IceFlix.TemporaryUnavailable
         
         if checked.isAdmin(adminToken):
+            self.revocationsPublisher.revokeUser(username, self.srvId)
         
         else:
             raise IceFlix.Unauthorized
