@@ -78,6 +78,26 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
 
         else:
             logging.info("Received annoucement from unknown service %s: %s", service_id, service.ice_ids(),)
+    
+    def validService_id(self, service_id, service_type, current = None):
+        
+        """ Comprueba si el servicio es válido"""
+        
+        check = False
+        
+        if service_type == "Main" and service_id in self.se.mainServices:
+                check = True
+                
+        if service_type == "Authenticator" and service_id in self.se.authServices:
+                check = True
+                
+        if service_type == "Catalog" and service_id in self.se.catalogServices:
+                check = True
+                
+        if service_type == "StreamProvider" and service_id in self.se.streamServices:
+                check = True
+                
+        return check
 
 
 class ServiceAnnouncementsSender:
