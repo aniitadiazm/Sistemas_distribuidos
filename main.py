@@ -36,76 +36,20 @@ class Main(IceFlix.Main):
 
     def updateDB(self, values, service_id, current):  # pylint: disable=invalid-name,unused-argument
         
-        """ Receives the current main service database from a peer """
+        """ Actualiza la base de datos de la instancia con los usuarios y tokens más recientes """
+
+        logging.info("Receiving remote data base from %s to %s", service_id, self.service_id)
+
+        if self.serviceAnnouncements.validService_id(service_id, "Main"):
+            self.volatileServices = values
+            print(self.volatileServices.authenticators)
         
-        logging.info(
-            "Receiving remote data base from %s to %s", service_id, self.service_id
-        )
+        else:
+            print("Origen desconocido")
 
-
-class MainApp(Ice.Application):
-    
-    """ Example Ice.Application for a Main service """
-
-    def __init__(self):
-        super().__init__()
-        self.servant = Main()
-        self.proxy = None
-        self.adapter = None
-        self.announcer = None
-        self.subscriber = None
-
-    def setup_announcements(self):
-        
-        """ Configure the announcements sender and listener """
-
-        communicator = self.communicator()
-        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
-            communicator.propertyToProxy("IceStorm.TopicManager"),
-        )
-
-        try:
-            topic = topic_manager.create("ServiceAnnouncements")
-        except IceStorm.TopicExists:
-            topic = topic_manager.retrieve("ServiceAnnouncements")
-
-        self.announcer = ServiceAnnouncementsSender(
-            topic,
-            self.servant.service_id,
-            self.proxy,
-        )
-
-        self.subscriber = ServiceAnnouncementsListener(
-            self.servant, self.servant.service_id, IceFlix.MainPrx
-        )
-
-        subscriber_prx = self.adapter.addWithUUID(self.subscriber)
-        topic.subscribeAndGetPublisher({}, subscriber_prx)
-
-    def run(self, args):
-        
-        """ Run the application, adding the needed objects to the adapter """
-        
-        logging.info("Running Main application")
-        comm = self.communicator()
-        self.adapter = comm.createObjectAdapter("Main")
-        self.adapter.activate()
-
-        self.proxy = self.adapter.addWithUUID(self.servant)
-
-        self.setup_announcements()
-        self.announcer.start_service()
-
-        self.shutdownOnInterrupt()
-        comm.waitForShutdown()
-
-        self.announcer.stop()
-        return 0
-    
     def isAdmin(self, adminToken, current=None):
         
-        """ Devuelve un valor booleano para comprobar si el token proporcionado
-        corresponde o no con el administrativo """
+        """ Devuelve un valor booleano para comprobar si el token proporcionado corresponde o no con el administrativo """
         
         print(adminToken)
         if adminToken == TOKEN_ADMIN:
@@ -160,7 +104,65 @@ class MainApp(Ice.Application):
         
         checked = IceFlix.MediaCatalogPrx.checkedCast(randomCatalog)  # Si el servidor está asociado a la interfaz devuelve el proxy, sino None
         return checked
+    
+    
+class MainApp(Ice.Application):
+    
+    """ Example Ice.Application for a Main service """
 
-    def updateDB(self, currentDataBase, srvId, current=None):
+    def __init__(self):
+        super().__init__()
+        self.servant = Main()
+        self.proxy = None
+        self.adapter = None
+        self.announcer = None
+        self.subscriber = None
 
-        """ Actualiza la base de datos de la instancia con los usuarios y tokens más recientes """
+    def setup_announcements(self):
+        
+        """ Configure the announcements sender and listener """
+
+        communicator = self.communicator()
+        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+            communicator.propertyToProxy("IceStorm.TopicManager"),
+        )
+
+        try:
+            topic = topic_manager.create("ServiceAnnouncements")
+        
+        except IceStorm.TopicExists:
+            topic = topic_manager.retrieve("ServiceAnnouncements")
+
+        self.announcer = ServiceAnnouncementsSender(
+            topic,
+            self.servant.service_id,
+            self.proxy,
+        )
+
+        self.subscriber = ServiceAnnouncementsListener(
+            self.servant, self.servant.service_id, IceFlix.MainPrx
+        )
+
+        subscriber_prx = self.adapter.addWithUUID(self.subscriber)
+        topic.subscribeAndGetPublisher({}, subscriber_prx)
+
+    def run(self, args):
+        
+        """ Run the application, adding the needed objects to the adapter """
+        
+        logging.info("Running Main application")
+        comm = self.communicator()
+        self.adapter = comm.createObjectAdapter("Main")
+        self.adapter.activate()
+
+        self.proxy = self.adapter.addWithUUID(self.servant)
+
+        self.setup_announcements()
+        self.announcer.start_service()
+
+        self.shutdownOnInterrupt()
+        comm.waitForShutdown()
+
+        self.announcer.stop()
+        return 0
+    

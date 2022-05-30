@@ -41,7 +41,7 @@ def build_new_token():
     return token
 
 
-class AuthenticatorInterface(IceFlix.Authenticator):
+class Authenticator(IceFlix.Authenticator):
 
     """ Actúa como servidor de autenticación """
 
@@ -117,21 +117,20 @@ class AuthenticatorInterface(IceFlix.Authenticator):
 
     def addUser(self, username, passwordHash, adminToken, current = None):
 
-        """ Permite añadir unas nuevas credenciales en el almacén de datos
-        si el token administrativo es correcto """
+        """ Permite añadir unas nuevas credenciales en el almacén de datos si el token administrativo es correcto """
 
         active = False
         while active is False:
             if self.se.mainServices != {}:
             
-                randomMain = random.choice(list(self.se.mainServices.values()))   # Selecciona un aleatorio del diccionario
+                randomMain = random.choice(list(self.se.mainServices.values()))   # Seleccionar un aleatorio del diccionario
                 
                 try:
                     randomMain.ice_ping()  # Comprobar que el objeto existe y recibe mensajes
                     active = True
                     
                 except:
-                    del self.se.mainServices[randomMain]  # Elimnar el objeto randomMain del diccionario
+                    del self.se.mainServices[randomMain]  # Eliminar el objeto randomMain del diccionario
             
             else:
                 active = True
@@ -140,49 +139,66 @@ class AuthenticatorInterface(IceFlix.Authenticator):
         checked = IceFlix.MainPrx.checkedCast(randomMain)  # Si el servidor está asociado a la interfaz devuelve el proxy, sino None
         
         if checked.isAdmin(adminToken):  # Si el token administrativo es correcto
-            self.userUpdatePublisher.newUser(username, passwordHash, self.srvId)  # Crear el nuevo usuario en el almacén de datos
+            self.userUpdatePublisher.newUser(username, passwordHash, self.service_id)  # Crear el nuevo usuario en el almacén de datos
             
         else:
             raise IceFlix.Unauthorized
 
     def removeUser(self, username, adminToken, current = None):
 
-        """ Permite eliminar unas credenciales del almacén de datos
-        si el token administrativo es correcto """
+        """ Permite eliminar unas credenciales del almacén de datos si el token administrativo es correcto """
 
         active = False
         while active is False:
             if self.se.mainServices != {}:
                 
-                randomMain = random.choice(list(self.se.mainServices.values()))
+                randomMain = random.choice(list(self.se.mainServices.values()))  # Seleccionar un aleatorio del diccionario
                 
                 try:
-                    randomMain.ice_ping()
+                    randomMain.ice_ping()  # Comprobar que el objeto existe y recibe mensajes
                     active = True
                     
                 except:
-                    del self.se.mainServices[randomMain]
+                    del self.se.mainServices[randomMain]   # Eliminar el objeto randomMain del diccionario
             
             else:
                 active = True
                 raise IceFlix.TemporaryUnavailable
         
-        if checked.isAdmin(adminToken):
-            self.revocationsPublisher.revokeUser(username, self.srvId)
+        checked = IceFlix.MainPrx.checkedCast(randomMain)  # Si el servidor está asociado a la interfaz devuelve el proxy, sino None
+        
+        if checked.isAdmin(adminToken):  # Si el token administrativo es correcto
+            self.revocationsPublisher.revokeUser(username, self.service_id)  # Eliminar el usuario del almacén de datos
         
         else:
             raise IceFlix.Unauthorized
         
 
-    def updateDB(self, currentDataBase, service_id, current = None):
+    def updateDB(self, values, service_id, current):
 
         """ Actualiza la base de datos de la instancia con los usuarios y tokens más recientes """
 
-        print(self.serviceAnnouncements.se.authServices)
-        
-        if self.ServiceAnnouncementsListener.announce(service_id,"Authenticator"):
-            self.users = currentDataBase
+        logging.info("Receiving remote data base from %s to %s", service_id, self.service_id)
+
+        if self.ServiceAnnouncements.validService_id(service_id, "Authenticator"):
+            self.users = values
             print(self.users)
         
         else:
             print("Error al obtener la base de datos")
+
+
+class UserUpdates(IceFlix.UserUpdates):
+    
+    """ El servicio de autenticación recibe nuevos datos o actualizaciones a los ya existentes """
+    
+    def newUser(self, user, passwordHash, service_id, current=None):
+        
+        """Method for the new user and his hashed password"""
+        
+        if self.serviceAnnouncements.validService_id(service_id, "Authenticator" ):
+            self.sirviente.users.userPasswords[user] = passwordHash
+            self.sirviente.commitChanges()
+        
+        else:
+            print("Origen desconocido")
