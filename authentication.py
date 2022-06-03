@@ -180,7 +180,7 @@ class Authenticator(IceFlix.Authenticator):
 
         logging.info("Receiving remote data base from %s to %s", service_id, self.service_id)
 
-        if self.ServiceAnnouncements.validService_id(service_id, "Authenticator"):
+        if self.ServiceAnnouncementsListener.validService_id(service_id, "Authenticator"):
             self.users = values
             print(self.users)
         

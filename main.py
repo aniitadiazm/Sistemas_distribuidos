@@ -40,7 +40,7 @@ class Main(IceFlix.Main):
 
         logging.info("Receiving remote data base from %s to %s", service_id, self.service_id)
 
-        if self.serviceAnnouncements.validService_id(service_id, "Main"):
+        if self.serviceAnnouncementsListener.validService_id(service_id, "Main"):
             self.volatileServices = values
             print(self.volatileServices.authenticators)
         
