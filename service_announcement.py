@@ -81,7 +81,7 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
     
     def validService_id(self, service_id, service_type, current = None):
         
-        """ Comprueba si el servicio es válido"""
+        """ Comprueba si el servicio es válido """
         
         check = False
         

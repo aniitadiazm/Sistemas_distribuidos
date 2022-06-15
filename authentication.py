@@ -20,6 +20,7 @@ import random
 Ice.loadSlice('IceFlix.ice')
 import IceFlix
 from service_announcement import ServiceAnnouncementsListener
+from service_announcement import ServiceAnnouncementsSender
 from server import Services
 
 DEFAULT_TOPICMANAGER_PROXY = 'IceStorm/TopicManager:tcp -p 10000'
@@ -204,15 +205,15 @@ class UserUpdates(IceFlix.UserUpdates):
     
     def __init__(self):
         
-        self.ServiceAnnouncements = None
+        self.ServiceAnnouncementsListener = None
         self.servant = None
     
     def newUser(self, user, passwordHash, service_id, current = None):
         
         """ Recibe nuevos datos o actualizaciones para un usuario """
         
-        if self.serviceAnnouncements.validService_id(service_id, "Authenticator" ):  # Validar el id comprobando que sea Authenticator
-            self.servant.users.userPasswords[user] = passwordHash  # Recopilar las contraseñas de los usuarios
+        if self.ServiceAnnouncementsListener.validService_id(service_id, "Authenticator" ):  # Validar el id comprobando que sea Authenticator
+            self.servant.users[user].get(PASSWORD_HASH, None)  # Obtener la contraseña del usuario
             self.servant.commitChanges()  # Actualizar los cambios
         
         else:
@@ -222,9 +223,46 @@ class UserUpdates(IceFlix.UserUpdates):
         
         """  Recibe nuevos datos o actualizaciones para un token """
         
-        if self.serviceAnnouncements.validService_id(service_id, "Authenticator" ):  # Validar el id comprobando que sea Authenticator
-            self.servant.users.usersToken[user] = userToken  # Recopilar los tokens de los usuarios
-            print(self.servant.users)  # Actualizar los cambios
+        if self.ServiceAnnouncementsListener.validService_id(service_id, "Authenticator" ):  # Validar el id comprobando que sea Authenticator
+            self.servant.users[user].get(CURRENT_TOKEN, None)  # Obtener el token del usuario
+            print(self.servant.users)  # Mostrar los datos de los usuarios
+            
+        else:
+            print("El origen no corresponde al Authenticator")
+
+
+class Revocations(IceFlix.Revocations):
+    
+    """ Recibe datos a eliminar para un usuario """
+
+    def __init__(self):
+        
+        self.serviceAnnouncementListener = None
+        self.servant = None
+        
+    def revokeUser( self, user, service_id, current = None):
+        
+        """Method use to alert the revokation of the differents authentications"""
+        
+        if self.serviceAnnouncementsListener.validService_id(service_id, "Authenticator" ):    # Validar el id comprobando que sea Authenticator
+            
+            if user in self.servant.users:  # Si el usuario existe
+                del self.servant.users[user].get(PASSWORD_HASH, None)  # Obtener la contraseña del usuario 
+                self.servant.commitChanges()  # Actualizar los cambios
+            
+        else:
+            print("El origen no corresponde al Authenticator")
+
+    def revokeToken(self, user, service_id, current = None):
+        
+        """Method to controll the userToken received"""
+        
+        if self.serviceAnnouncementsListener.validService_id(service_id, "Authenticator" ):  # Validar el id comprobando que sea Authenticator
+            
+            if user in self.servant.users:  # Si el usuario existe
+                del self.servant.users[user].get(CURRENT_TOKEN, None)  # Obtener el token del usuario
+                
+            print(self.servant.users)  # Mostrar los datos de los usuarios
             
         else:
             print("El origen no corresponde al Authenticator")
