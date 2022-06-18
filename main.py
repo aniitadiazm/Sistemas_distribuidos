@@ -6,14 +6,13 @@ import uuid
 import Ice
 import IceStorm
 import random
-
+Ice.loadSlice('IceFlix.ice')
 import IceFlix
-from iceflix.service_announcement import (
-    ServiceAnnouncementsListener,
-    ServiceAnnouncementsSender,
-)
+from service_announcement import ServiceAnnouncementsListener
+from service_announcement import ServiceAnnouncementsSender
 
-TOKEN_ADMIN="admin"
+
+TOKEN_ADMIN = "admin"
 
 
 class Main(IceFlix.Main):
@@ -34,7 +33,7 @@ class Main(IceFlix.Main):
         
         service.updateDB(None, self.service_id)
 
-    def updateDB(self, values, service_id, current):  # pylint: disable=invalid-name,unused-argument
+    def updateDB(self, values, service_id, current = None):  # pylint: disable=invalid-name,unused-argument
         
         """ Actualiza la base de datos de la instancia con los usuarios y tokens más recientes """
 
@@ -42,22 +41,20 @@ class Main(IceFlix.Main):
 
         if self.serviceAnnouncementsListener.validService_id(service_id, "Main"):
             self.volatileServices = values
-            print(self.volatileServices.authenticators)
         
         else:
-            print("Origen desconocido")
+            print("El origen no corresponde al Main")
 
-    def isAdmin(self, adminToken, current=None):
+    def isAdmin(self, admin, current = None):
         
         """ Devuelve un valor booleano para comprobar si el token proporcionado corresponde o no con el administrativo """
         
-        print(adminToken)
-        if adminToken == TOKEN_ADMIN:
+        if admin == TOKEN_ADMIN:
             return True
         
         return False
     
-    def getAuthenticator(self, current=None):
+    def getAuthenticator(self, current = None):
         
         """ Devuelve un proxy a un servicio de autenticación """
         
