@@ -1,11 +1,21 @@
 """Module containing a template for a main service."""
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+# pylint: disable=C0103
+# pylint: disable=C0301
+# pylint: disable=C0113
+# pylint: disable=E0401
+# pylint: disable=C0103
+# pylint: disable=C0411
+# pylint: disable=C0413
+# pylint: disable=W0613
 
 import logging
 import uuid
-
-import Ice
-import IceStorm
 import random
+import IceStorm
+import Ice
 Ice.loadSlice('IceFlix.ice')
 import IceFlix
 from service_announcement import ServiceAnnouncementsListener
@@ -20,7 +30,7 @@ class Main(IceFlix.Main):
     """ Servant for the IceFlix.Main interface.
     Disclaimer: this is demo code, it lacks of most of the needed methods
     for this interface. Use it with caution """
-
+    
     def __init__(self):
         
         """ Create the Main servant instance """
@@ -81,7 +91,7 @@ class Main(IceFlix.Main):
     def getCatalog(self, current=None):
         
         """ Devuelve un proxy a un servicio de catálogo """
-        
+
         active = False
         while active is False:
             
