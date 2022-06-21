@@ -15,12 +15,11 @@ import json
 import uuid
 import sqlite3
 
-from authentication import Authenticator
 Ice.loadSlice('IceFlix.ice')
 import IceFlix
+from authentication import Authenticator
 from service_announcement import ServiceAnnouncementsListener
 from service_announcement import ServiceAnnouncementsSender
-from main import Main
 from server import Services
 
 CATALOG_FILE = 'catalog.json'
@@ -47,38 +46,63 @@ class Catalog(IceFlix.MediaCatalog):
         self.services = Services()
         self.proxy = {}
     
-    def getTile(self, media_id, user, current=None):
+    def getTile(self, media_id, token, current=None):
         
         """ Permite realizar la búsqueda de un medio conocido su identificador """
         
-        if not self.catalog.in_catalog(media_id):
+        if not self.catalog.in_catalog(media_id):  # Si no se localiza el id del medio
             raise IceFlix.WrongMediaId(media_id)
 
-        if media_id not in self.proxy:
+        if media_id not in self.proxy:  #Si no existe el proxy
             raise IceFlix.TemporaryUnavailable
 
         try:
-            user = Authenticator.whois(user) 
+            user = Authenticator.whois(token)  # Descubirir el nombre de usuario a partir de su token
             
         except IceFlix.Unauthorized:
             user = 'NOT_FOUND'
 
-        tags = read_tags_db()
-        tag_list = []
+        tags = read_tags_db()  # Leer las etiquetas de la base de datos
 
-        for user in tags:
-            if media_id in tags[user]:
-                tag_list = [tag for tag in tags[user][media_id]]
+        for user in tags:  #Recorrer las tags
+            
+            if media_id in tags[user]:  # Si el id del medio se encuentra entre las etiquetas del usuario
+                tags_list = [tag for tag in tags[user][media_id]]  # guardar las etiquetas para ese medio y ese usuario
         
-        checked = Media(media_id, self.proxy[media_id][-1], MediaInfo(self.catalog.get_name_by_id(media_id), tag_list))
+        checked = Media(media_id, self.proxy[media_id][-1], MediaInfo(self.catalog.get_name_by_id(media_id), tags_list))
         return checked
     
     def getTilesByName(self, name, exact, current=None):
         
         """ Permite realizar una búsqueda de medios usando su nombre """
         
-        tiles = self.catalog.get_id_by_name(name, exact)
+        tiles = self.catalog.get_id_by_name(name, exact)  # Localizar el id del medio por su nombre
         return tiles
+    
+    def getTilesByTags(self, tags, AllTags, token, current=None):
+        
+        """ Permite realizar búsquedas de medios en función de los tags definidos por el usuario """
+        
+        try:
+            user = Authenticator.whois(token)  # Descubirir el nombre de usuario a partir de su token
+            
+        except IceFlix.Unauthorized:
+            user = 'NOT_FOUND' 
+
+        tags_db = read_tags_db(self.tags_db)  # Leer las etiquetas de la base de datos
+        
+        if user in tags_db:  # Si el usuario contiene las tags
+            tiles_list = []
+            
+            for media in tags_db[user]:  # Recorrer las tags del usuario
+                
+                if not AllTags and any(tag in tags_db[user][media] for tag in tags):
+                    tiles_list.append(media)
+                    
+                elif AllTags and all([(tag in tags) for tag in tags_db[user][media]]):
+                    tiles_list.append(media)
+
+        return tiles_list
 
 
 class CatalogDB():
@@ -136,7 +160,7 @@ class CatalogDB():
             get_id_sql = f"SELECT id FROM catalog WHERE Name LIKE '%{name}%' COLLATE NOCASE"
 
         with self.build_connection(self.database) as connection:  # Conectarse a la base de datos
-            cursor = connection.cursor()  # Crear un objeto de cursor 
+            cursor = connection.cursor()  # Crear un objeto de cursor
             cursor.execute(get_id_sql)  # Ejecutar la consulta
             result = cursor.fetchall()  # Guardar las filas que lance como resultado
             
@@ -149,7 +173,7 @@ class Media(IceFlix.Media):
     
     def __init__(self, media_id, provider, info):
         
-        self.media_id = media_id # pylint: disable=invalid-name
+        self.media_id = media_id
         self.provider = provider
         self.info = info
 
