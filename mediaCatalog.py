@@ -39,6 +39,8 @@ class Catalog(IceFlix.MediaCatalog):
     
     def __init__(self):
         
+        """ Inicializar el Catálogo """
+        
         self.service_id = str(uuid.uuid4())
         self.catalog = CatalogDB(self.service_id + '.db')
         self.tags_db = 'tags_' + self.service_id + '.json'
@@ -47,7 +49,7 @@ class Catalog(IceFlix.MediaCatalog):
     
     def getTile(self, media_id, user, current=None):
         
-        """ Permite realizar la búsqueda de un medio conocido su identificador. """
+        """ Permite realizar la búsqueda de un medio conocido su identificador """
         
         if not self.catalog.in_catalog(media_id):
             raise IceFlix.WrongMediaId(media_id)
@@ -70,6 +72,13 @@ class Catalog(IceFlix.MediaCatalog):
         
         checked = Media(media_id, self.proxy[media_id][-1], MediaInfo(self.catalog.get_name_by_id(media_id), tag_list))
         return checked
+    
+    def getTilesByName(self, name, exact, current=None):
+        
+        """ Permite realizar una búsqueda de medios usando su nombre """
+        
+        tiles = self.catalog.get_id_by_name(name, exact)
+        return tiles
 
 
 class CatalogDB():
@@ -94,7 +103,7 @@ class CatalogDB():
         result = False
             
         with self.build_connection(self.database) as connection:  # Conectarse a la base de datos
-            cursor = connection.cursor()
+            cursor = connection.cursor()  # Crear un objeto de cursor
             cursor.execute(sql)  # Ejecutar la consulta
             
             if cursor.fetchone():  # Si la consulta devuelve filas como resultado
@@ -110,8 +119,46 @@ class CatalogDB():
         get_by_name_sql = f"SELECT Name FROM catalog WHERE id = '{media_id}';"
         
         with self.build_connection(self.database) as connection:  # Conectarse a la base de datos
-            cursor = connection.cursor()
+            cursor = connection.cursor()  # Crear un objeto de cursor 
             cursor.execute(get_by_name_sql)  # Ejecutar la consulta
             result = cursor.fetchone()  # Guardar las filas que lance como resultado
             
         return result
+    
+    def get_id_by_name(self, name, exact):
+        
+        """ Obtiene el id de un objeto media a través de su nombre """
+        
+        if exact:
+            get_id_sql = f"SELECT id FROM catalog WHERE Name='{name}' COLLATE NOCASE"
+
+        else:
+            get_id_sql = f"SELECT id FROM catalog WHERE Name LIKE '%{name}%' COLLATE NOCASE"
+
+        with self.build_connection(self.database) as connection:  # Conectarse a la base de datos
+            cursor = connection.cursor()  # Crear un objeto de cursor 
+            cursor.execute(get_id_sql)  # Ejecutar la consulta
+            result = cursor.fetchall()  # Guardar las filas que lance como resultado
+            
+        return result
+
+
+class Media(IceFlix.Media):
+    
+    """ Inicializar el objeto Media de IceFlix """
+    
+    def __init__(self, media_id, provider, info):
+        
+        self.media_id = media_id # pylint: disable=invalid-name
+        self.provider = provider
+        self.info = info
+
+
+class MediaInfo(IceFlix.MediaInfo):
+    
+    """ Inicializar el objeto MediaInfo de IceFlix """
+    
+    def __init__(self, name, tags):
+        
+        self.name = name
+        self.tags = tags
