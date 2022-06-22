@@ -192,8 +192,8 @@ class Authenticator(IceFlix.Authenticator):
 
         logging.info("Recopilando la base de datos de %s para %s", service_id, self.service_id)
 
-        if self.ServiceAnnouncementsListener.validService_id(service_id, "Authenticator"):
-            self.users = valuesDB
+        if self.ServiceAnnouncementsListener.validService_id(service_id, "Authenticator"):  # Si el servicio corresponde al Authenticator
+            self.users = valuesDB  # Actualizar los usuarios
             print(self.users)
         
         else:

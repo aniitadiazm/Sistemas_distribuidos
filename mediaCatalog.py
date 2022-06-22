@@ -20,6 +20,7 @@ Ice.loadSlice('IceFlix.ice')
 import IceFlix
 from authentication import Authenticator
 from server import Services
+from service_announcement import ServiceAnnouncementsListener
 
 CATALOG_FILE = 'catalog.json'
 
@@ -274,48 +275,54 @@ class CatalogUpdates(IceFlix.CatalogUpdates):
     def __init__(self, servant):
         
         self.servant = servant
-        self.publisher = None
+        self.ServiceAnnouncementsListener = None
         
     def renameTile(self, media_id, name, service_id, current=None):
         
         """ Se emite cuando el administrador modifica el nombre de un medio en una instancia """
         
-        if service_id == self.servant.service_id or not self.servant.catalog.in_catalog(media_id):  # Si los ids de los servicios coinciden o el medio no se encuentra en el catálogo
-            return
+        if self.ServiceAnnouncementsListener.validService_id(service_id, "MediaCatalog"):  # Si los ids de los servicios coinciden o el medio no se encuentra en el catálogo
 
-        self.servant.catalog.rename_media(name, media_id)  # Renombrar el medio a través de su id
+            self.servant.catalog.rename_media(media_id, name)  # Renombrar el medio a través de su id
+        
+        else:
+            print("El origen no corresponde al MediaCatalog")
         
     def addTags(self, media_id, tags, user, service_id, current=None):
         
         """ Se emite cuando un usuario añade satisfactoriamente tags a algún medio """
         
-        if service_id == self.servant.service_id:  
-            return
+        if self.ServiceAnnouncementsListener.validService_id(service_id, "MediaCatalog"):  # Si los ids de los servicios coinciden o el medio no se encuentra en el catálogo
 
-        tags_db = read_tags_db()  # Leer las etiquetas de la base de datos
+            tags_db = read_tags_db()  # Leer las etiquetas de la base de datos
 
-        if user in tags_db and media_id in tags_db[user]:  # Si el usuario contiene las tags y el medio contiene las tags del usuario 
-            for tag in tags:  # Recorrer las etiquetas
-                tags_db[user][media_id].append(tag)  # para cada usuario y medio añadir su tag correspondiente
-                
+            if user in tags_db and media_id in tags_db[user]:  # Si el usuario contiene las tags y el medio contiene las tags del usuario 
+                for tag in tags:  # Recorrer las etiquetas
+                    tags_db[user][media_id].append(tag)  # para cada usuario y medio añadir su tag correspondiente
+                    
+            else:
+                tags_list = {}
+                tags_list[media_id] = tags # Añadimos las etiquetas al medio
+                tags_db[user] = tags_list  # Añadimos las etiquetas del medio al usuario
+    
+            write_tags_db(tags_db[user])  # Escribir las tags del usuario
+        
         else:
-            tags_list = {}
-            tags_list[media_id] = tags # Añadimos las etiqueta al medio
-            tags_db[user] = tags_list  # Añadimos las etiquetas del medio al usuario
- 
-        write_tags_db(tags_db[user])  # Escribir las tags del usuario
+            print("El origen no corresponde al MediaCatalog")
 
     def removeTags(self, media_id, tags, user, service_id, current=None):
          
         """ Se emite cuando un usuario elimina satisfactoriamente tags de algún medio """
         
-        if service_id == self.servant.service_id:
-            return
+        if self.ServiceAnnouncementsListener.validService_id(service_id, "MediaCatalog"):  # Si los ids de los servicios coinciden o el medio no se encuentra en el catálogo
 
-        tags_db = read_tags_db()  # Leer las etiquetas de la base de datos
+            tags_db = read_tags_db()  # Leer las etiquetas de la base de datos
+            
+            if user in tags_db and media_id in tags_db[user]:  # Si el usuario contiene las tags y el medio contiene las tags del usuario
+                tags_db[user][media_id] = [tag for tag in tags_db[user][media_id] if tag not in tags]
+
+            write_tags_db(tags_db)  # Escribir las tags
         
-        if user in tags_db and media_id in tags_db[user]:  # Si el usuario contiene las tags y el medio contiene las tags del usuario
-            tags_db[user][media_id] = [tag for tag in tags_db[user][media_id] if tag not in tags]
-
-        write_tags_db(tags_db)  # Escribir las tags
+        else:
+            print("El origen no corresponde al MediaCatalog")
     
