@@ -91,7 +91,7 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
         if service_type == "Authenticator" and service_id in self.se.authServices:
                 check = True
                 
-        if service_type == "Catalog" and service_id in self.se.catalogServices:
+        if service_type == "MediaCatalog" and service_id in self.se.catalogServices:
                 check = True
                 
         if service_type == "StreamProvider" and service_id in self.se.streamServices:

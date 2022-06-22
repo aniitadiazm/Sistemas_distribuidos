@@ -15,6 +15,7 @@ import json
 import uuid
 import sqlite3
 import random
+import logging
 Ice.loadSlice('IceFlix.ice')
 import IceFlix
 from authentication import Authenticator
@@ -53,6 +54,7 @@ class Catalog(IceFlix.MediaCatalog):
         self.services = Services()
         self.proxy = {}
         self.updateSubscriber = None
+        self.ServiceAnnouncementsListener = None
     
     def getTile(self, media_id, token, current=None):
         
@@ -156,6 +158,19 @@ class Catalog(IceFlix.MediaCatalog):
 
         self.catalog.rename_media(name, media_id)
         self.updateSubscriber.publisher.renameTile(media_id, name, self.service_id)
+    
+    def updateDB(self, valuesDB, service_id, current = None):
+
+        """ Actualiza la base de datos de la instancia con los usuarios y tokens más recientes """
+
+        logging.info("Recopilando la base de datos de %s para %s", service_id, self.service_id)
+
+        if self.ServiceAnnouncementsListener.validService_id(service_id, "MediaCatalog"):
+            self.tags_db = valuesDB
+            print(self.tags_db)
+        
+        else:
+            print("Error al obtener la base de datos")
 
 
 class CatalogDB():
