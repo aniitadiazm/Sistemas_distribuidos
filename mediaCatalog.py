@@ -14,7 +14,7 @@ import Ice
 import json
 import uuid
 import sqlite3
-
+import random
 Ice.loadSlice('IceFlix.ice')
 import IceFlix
 from authentication import Authenticator
@@ -141,6 +141,21 @@ class Catalog(IceFlix.MediaCatalog):
 
         write_tags_db(tags_db)
         self.updateSubscriber.publisher.addTags(media_id, tags, user, self.service_id)
+    
+    def renameTile(self, media_id, name, token, current=None): # pylint: disable=invalid-name, unused-argument
+        
+        '''Renombra un medio.'''
+        
+        mainService = random.choice(list(self.discover_subscriber.mainServices.values()))
+
+        if not mainService.isAdmin(token):
+            raise IceFlix.Unauthorized
+
+        if not self.catalog.in_catalog(media_id):
+            raise IceFlix.WrongMediaId(media_id)
+
+        self.catalog.rename_media(name, media_id)
+        self.updateSubscriber.publisher.renameTile(media_id, name, self.service_id)
 
 
 class CatalogDB():
@@ -204,6 +219,19 @@ class CatalogDB():
             
         return result
 
+    def rename_media(self, name, media_id):
+        
+        """ Renombrar un objeto media del catálogo mediante su id"""
+        
+        rename_media_sql = f"UPDATE catalog SET Name='{name}' WHERE id='{media_id}'"
+        
+        with self.build_connection(self.database) as connection:  # Conectarse a la base de datos
+            cursor = connection.cursor()  # Crear un objeto de cursor
+            cursor.execute(rename_media_sql)  # Ejecutar la consulta
+            connection.commit()  # Modificar los datos de la base de datos
+            
+        connection.close()
+
 
 class Media(IceFlix.Media):
     
@@ -224,3 +252,55 @@ class MediaInfo(IceFlix.MediaInfo):
         
         self.name = name
         self.tags = tags
+
+
+class CatalogUpdates(IceFlix.CatalogUpdates):
+    
+    def __init__(self, servant):
+        
+        self.servant = servant
+        self.publisher = None
+        
+    def renameTile(self, media_id, name, service_id, current=None):
+        
+        """ Se emite cuando el administrador modifica el nombre de un medio en una instancia """
+        
+        if service_id == self.servant.service_id or not self.servant.catalog.in_catalog(media_id):  # Si los ids de los servicios coinciden o el medio no se encuentra en el catálogo
+            return
+
+        self.servant.catalog.rename_media(name, media_id)  # Renombrar el medio a través de su id
+        
+    def addTags(self, media_id, tags, user, service_id, current=None):
+        
+        """ Se emite cuando un usuario añade satisfactoriamente tags a algún medio """
+        
+        if service_id == self.servant.service_id:  
+            return
+
+        tags_db = read_tags_db()  # Leer las etiquetas de la base de datos
+
+        if user in tags_db and media_id in tags_db[user]:  # Si el usuario contiene las tags y el medio contiene las tags del usuario 
+            for tag in tags:  # Recorrer las etiquetas
+                tags_db[user][media_id].append(tag)  # para cada usuario y medio añadir su tag correspondiente
+                
+        else:
+            tags_list = {}
+            tags_list[media_id] = tags # Añadimos las etiqueta al medio
+            tags_db[user] = tags_list  # Añadimos las etiquetas del medio al usuario
+ 
+        write_tags_db(tags_db[user])  # Escribir las tags del usuario
+
+    def removeTags(self, media_id, tags, user, service_id, current=None):
+         
+        """ Se emite cuando un usuario elimina satisfactoriamente tags de algún medio """
+        
+        if service_id == self.servant.service_id:
+            return
+
+        tags_db = read_tags_db()  # Leer las etiquetas de la base de datos
+        
+        if user in tags_db and media_id in tags_db[user]:  # Si el usuario contiene las tags y el medio contiene las tags del usuario
+            tags_db[user][media_id] = [tag for tag in tags_db[user][media_id] if tag not in tags]
+
+        write_tags_db(tags_db)  # Escribir las tags
+    
