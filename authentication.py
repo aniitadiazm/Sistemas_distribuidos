@@ -19,8 +19,6 @@ import logging
 import random
 Ice.loadSlice('IceFlix.ice')
 import IceFlix
-from service_announcement import ServiceAnnouncementsListener
-from service_announcement import ServiceAnnouncementsSender
 from server import Services
 
 DEFAULT_TOPICMANAGER_PROXY = 'IceStorm/TopicManager:tcp -p 10000'
@@ -54,6 +52,9 @@ class Authenticator(IceFlix.Authenticator):
         self.active_tokens = set()
         self.service_id = None
         self.services = Services()
+        self.updatePublisher = None
+        self.revocationsPublisher = None
+        self.ServiceAnnouncementsListener = None
 
         if os.path.exists(USERS_FILE): 
             self.refresh()  # Recargar los tokens
@@ -105,7 +106,7 @@ class Authenticator(IceFlix.Authenticator):
         
         new_token = build_new_token()  # Construimos el nuevo token
 
-        self.userUpdatePublisher.newToken(user,new_token,self.service_id)  # Añadimos el nuevo token
+        self.updatePublisher.newToken(user, new_token, self.service_id)  # Añadimos el nuevo token
 
         return new_token
 
@@ -148,7 +149,7 @@ class Authenticator(IceFlix.Authenticator):
         checked = IceFlix.MainPrx.checkedCast(randomMain)  # Si el servidor está asociado a la interfaz devuelve el proxy, sino None
         
         if checked.isAdmin(admin):  # Si el token administrativo es correcto
-            self.UpdatePublisher.newUser(user, password_hash, self.service_id)  # Crear el nuevo usuario en el almacén de datos
+            self.updatePublisher.newUser(user, password_hash, self.service_id)  # Crear el nuevo usuario en el almacén de datos
             
         else:
             raise IceFlix.Unauthorized
@@ -235,14 +236,14 @@ class Revocations(IceFlix.Revocations):
 
     def __init__(self):
         
-        self.ServiceAnnouncementListener = None
         self.servant = None
+        self.ServiceAnnouncementListener = None
         
     def revokeUser(self, user, service_id, current = None):
         
         """ Se emite cuando el administrador elimina un usuario del sistema """
         
-        if self.ServiceAnnouncementsListener.validService_id(service_id, "Authenticator"):    # Validar el id comprobando que sea Authenticator
+        if self.ServiceAnnouncementListener.validService_id(service_id, "Authenticator"):    # Validar el id comprobando que sea Authenticator
             
             if user in self.servant.users:  # Si el usuario existe
                 del self.servant.users[user].get(PASSWORD_HASH, None)  # Eliminar la contraseña del usuario 
@@ -255,7 +256,7 @@ class Revocations(IceFlix.Revocations):
         
         """ Se emite cuando un token expira pasados los 2 minutos de validez """
         
-        if self.serviceAnnouncementsListener.validService_id(service_id, "Authenticator"):  # Validar el id comprobando que sea Authenticator
+        if self.ServiceAnnouncementListener.validService_id(service_id, "Authenticator"):  # Validar el id comprobando que sea Authenticator
             
             if user in self.servant.users:  # Si el usuario existe
                 del self.servant.users[user].get(CURRENT_TOKEN, None)  # Eliminar el token del usuario

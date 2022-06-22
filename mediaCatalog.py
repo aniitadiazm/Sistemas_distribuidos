@@ -18,8 +18,6 @@ import sqlite3
 Ice.loadSlice('IceFlix.ice')
 import IceFlix
 from authentication import Authenticator
-from service_announcement import ServiceAnnouncementsListener
-from service_announcement import ServiceAnnouncementsSender
 from server import Services
 
 CATALOG_FILE = 'catalog.json'
@@ -34,6 +32,15 @@ def read_tags_db():
     return tags
 
 
+def write_tags_db(tags):
+    
+    """ Escribe las tags en la base de datos """
+    
+    with open(CATALOG_FILE, 'w') as file:
+        json.dump(tags, file)
+        file.close()
+
+
 class Catalog(IceFlix.MediaCatalog):
     
     def __init__(self):
@@ -45,10 +52,17 @@ class Catalog(IceFlix.MediaCatalog):
         self.tags_db = 'tags_' + self.service_id + '.json'
         self.services = Services()
         self.proxy = {}
+        self.updateSubscriber = None
     
     def getTile(self, media_id, token, current=None):
         
         """ Permite realizar la búsqueda de un medio conocido su identificador """
+        
+        try:
+            user = Authenticator.whois(token)  # Descubirir el nombre de usuario a partir de su token
+            
+        except IceFlix.Unauthorized:
+            user = 'NOT_FOUND'
         
         if not self.catalog.in_catalog(media_id):  # Si no se localiza el id del medio
             raise IceFlix.WrongMediaId(media_id)
@@ -56,18 +70,12 @@ class Catalog(IceFlix.MediaCatalog):
         if media_id not in self.proxy:  #Si no existe el proxy
             raise IceFlix.TemporaryUnavailable
 
-        try:
-            user = Authenticator.whois(token)  # Descubirir el nombre de usuario a partir de su token
-            
-        except IceFlix.Unauthorized:
-            user = 'NOT_FOUND'
+        tags_db = read_tags_db()  # Leer las etiquetas de la base de datos
 
-        tags = read_tags_db()  # Leer las etiquetas de la base de datos
-
-        for user in tags:  #Recorrer las tags
+        for user in tags_db:  #Recorrer las tags
             
-            if media_id in tags[user]:  # Si el id del medio se encuentra entre las etiquetas del usuario
-                tags_list = [tag for tag in tags[user][media_id]]  # guardar las etiquetas para ese medio y ese usuario
+            if media_id in tags_db[user]:  # Si el id del medio se encuentra entre las etiquetas del usuario
+                tags_list = [tag for tag in tags_db[user][media_id]]  # guardar las etiquetas para ese medio y ese usuario
         
         checked = Media(media_id, self.proxy[media_id][-1], MediaInfo(self.catalog.get_name_by_id(media_id), tags_list))
         return checked
@@ -87,9 +95,9 @@ class Catalog(IceFlix.MediaCatalog):
             user = Authenticator.whois(token)  # Descubirir el nombre de usuario a partir de su token
             
         except IceFlix.Unauthorized:
-            user = 'NOT_FOUND' 
+            user = 'NOT_FOUND'
 
-        tags_db = read_tags_db(self.tags_db)  # Leer las etiquetas de la base de datos
+        tags_db = read_tags_db()  # Leer las etiquetas de la base de datos
         
         if user in tags_db:  # Si el usuario contiene las tags
             tiles_list = []
@@ -104,6 +112,36 @@ class Catalog(IceFlix.MediaCatalog):
 
         return tiles_list
 
+    def addTags(self, media_id, tags, token, current=None): # pylint: disable=invalid-name, unused-argument
+        
+        """ Permite añadir una lista de tags a un medio concreto """
+       
+        try:
+            user = Authenticator.whois(token)  # Descubirir el nombre de usuario a partir de su token
+        
+        except IceFlix.Unauthorized:
+            user = 'NOT_FOUND'
+
+        if not self.catalog.in_catalog(media_id):  # Si no se localiza el id del medio
+            raise IceFlix.WrongMediaId(media_id)
+
+        tags_db = read_tags_db()  # Leer las etiquetas de la base de datos
+
+        if user in tags_db and media_id in tags_db[user]:  # Si el usuario contiene las tags y el medio contiene las tags del usuario
+            for tag in tags:  # Recorrer las tags
+                tags_db[user][media_id].append(tag)  # Añadir la tag correspondiente al usuario y al medio
+                
+        elif user in tags_db:  # Si solo el usuario contiene las tags
+            tags_db[user][media_id] = tags  # Añadir las tags al usuario y al medio
+            
+        else:  # Si no
+            tags_list = {}
+            tags_list[media_id] = tags  # Añadimos las etiqueta al medio
+            tags_db[user] = tags_list  # Añadimos las etiquetas del medio al usuario
+
+        write_tags_db(tags_db)
+        self.updateSubscriber.publisher.addTags(media_id, tags, user, self.service_id)
+
 
 class CatalogDB():
     
@@ -111,7 +149,7 @@ class CatalogDB():
         
         self.database = database
         
-    def build_connection(self, database):
+    def build_connection(self, database):  # pylint: disable=no-self-use
         
         """ Contruye la conexión a la base de datos del catálogo """
         
