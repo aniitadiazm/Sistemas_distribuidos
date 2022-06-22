@@ -17,6 +17,7 @@ import Ice
 import json
 import logging
 import random
+import threading
 Ice.loadSlice('IceFlix.ice')
 import IceFlix
 from server import Services
@@ -48,7 +49,8 @@ class Authenticator(IceFlix.Authenticator):
 
     def __init__(self):
 
-        self.users = {}
+        self._users_ =  USERS_FILE
+        self.users = IceFlix.UsersDB()
         self.active_tokens = set()
         self.service_id = None
         self.services = Services()
@@ -79,7 +81,7 @@ class Authenticator(IceFlix.Authenticator):
         logging.debug('Actualizando el almacén de datos')
         
         with open(USERS_FILE, 'w') as contents:  # Abrir el archivo json en modo escritura
-            json.dump(self.users, contents, indent = 4, sort_keys = True)  # Serializar los usuarios en el archivo contents, con indentación 4 y ordenados por su clave
+            json.dump(self.users, contents)  # Serializar los usuarios en el archivo contents, con indentación 4 y ordenados por su clave
 
     def refreshAuthorization(self, user, password_hash, current = None):
 
@@ -224,6 +226,9 @@ class UserUpdates(IceFlix.UserUpdates):
         
         if self.ServiceAnnouncementsListener.validService_id(service_id, "Authenticator" ):  # Validar el id comprobando que sea Authenticator
             self.servant.users[user].get(CURRENT_TOKEN, None) = current_token  # Obtener el token del usuario
+            time = threading.Timer(120, self.servant.revocationsPublisher.revokeToken[current_token, service_id])
+            time.start()
+            
             print(self.servant.users)  # Mostrar los datos de los usuarios
             
         else:

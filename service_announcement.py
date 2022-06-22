@@ -6,6 +6,8 @@ import logging
 import os
 import threading
 
+from server import Services
+
 import Ice
 
 try:
@@ -13,6 +15,7 @@ try:
 except ImportError:
     Ice.loadSlice(os.path.join(os.path.dirname(__file__), "iceflix.ice"))
     import IceFlix
+
 
 
 class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
@@ -42,6 +45,7 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
         self.catalogs = {}
         self.mains = {}
         self.known_ids = set()
+        self.services = Services()
 
     def newService(self, service, service_id, current):  # pylint: disable=invalid-name,unused-argument
         
@@ -85,16 +89,16 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
         
         check = False
         
-        if service_type == "Main" and service_id in self.se.mainServices:
+        if service_type == "Main" and service_id in self.services.mainServices:
                 check = True
                 
-        if service_type == "Authenticator" and service_id in self.se.authServices:
+        if service_type == "Authenticator" and service_id in self.services.authServices:
                 check = True
                 
-        if service_type == "MediaCatalog" and service_id in self.se.catalogServices:
+        if service_type == "MediaCatalog" and service_id in self.services.catalogServices:
                 check = True
                 
-        if service_type == "StreamProvider" and service_id in self.se.streamServices:
+        if service_type == "StreamProvider" and service_id in self.services.streamServices:
                 check = True
                 
         return check
