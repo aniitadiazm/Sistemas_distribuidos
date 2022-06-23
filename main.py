@@ -12,7 +12,6 @@
 # pylint: disable=W0613
 
 import logging
-import uuid
 import random
 import IceStorm
 import Ice
@@ -35,7 +34,8 @@ class Main(IceFlix.Main):
         
         """ Create the Main servant instance """
         
-        self.service_id = str(uuid.uuid4())
+        self.service_id = None
+        self.ServiceAnnouncementsListener = None
 
     def share_data_with(self, service):
         
@@ -47,9 +47,9 @@ class Main(IceFlix.Main):
         
         """ Actualiza la base de datos de la instancia con los usuarios y tokens más recientes """
 
-        logging.info("Receiving remote data base from %s to %s", service_id, self.service_id)
+        logging.info("Actualizando la base de datos de %s para %s", service_id, self.service_id)
 
-        if self.serviceAnnouncementsListener.validService_id(service_id, "Main"):
+        if self.ServiceAnnouncementsListener.validService_id(service_id, "Main"):
             self.volatileServices = values
         
         else:
