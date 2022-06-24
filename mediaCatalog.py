@@ -16,11 +16,13 @@ import uuid
 import sqlite3
 import random
 import logging
+import IceStorm
 Ice.loadSlice('IceFlix.ice')
 import IceFlix
 from authentication import Authenticator
 from server import Services
 from service_announcement import ServiceAnnouncementsListener
+from service_announcement import ServiceAnnouncementsSender
 
 CATALOG_FILE = 'catalog.json'
 
@@ -43,7 +45,7 @@ def write_tags_db(tags):
         file.close()
 
 
-class Catalog(IceFlix.MediaCatalog):
+class MediaCatalog(IceFlix.MediaCatalog):
     
     def __init__(self):
         
@@ -325,4 +327,65 @@ class CatalogUpdates(IceFlix.CatalogUpdates):
         
         else:
             print("El origen no corresponde al MediaCatalog")
+
+
+class MediaCatalogApp(Ice.Application):
+    
+    """ Example Ice.Application for a MediaCatalog service """
+
+    def __init__(self):
+        super().__init__()
+        self.servant = MediaCatalog()
+        self.proxy = None
+        self.adapter = None
+        self.announcer = None
+        self.subscriber = None
+
+    def setup_announcements(self):
+        
+        """ Configure the announcements sender and listener """
+
+        communicator = self.communicator()
+        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+            communicator.propertyToProxy("IceStorm.TopicManager"),
+        )
+
+        try:
+            topic = topic_manager.create("ServiceAnnouncements")
+        
+        except IceStorm.TopicExists:
+            topic = topic_manager.retrieve("ServiceAnnouncements")
+
+        self.announcer = ServiceAnnouncementsSender(
+            topic,
+            self.servant.service_id,
+            self.proxy,
+        )
+
+        self.subscriber = ServiceAnnouncementsListener(
+            self.servant, self.servant.service_id, IceFlix.MainPrx
+        )
+
+        subscriber_prx = self.adapter.addWithUUID(self.subscriber)
+        topic.subscribeAndGetPublisher({}, subscriber_prx)
+
+    def run(self, args):
+        
+        """ Run the application, adding the needed objects to the adapter """
+        
+        logging.info("Running MediaCatalog application")
+        comm = self.communicator()
+        self.adapter = comm.createObjectAdapter("MediaCatalog")
+        self.adapter.activate()
+
+        self.proxy = self.adapter.addWithUUID(self.servant)
+
+        self.setup_announcements()
+        self.announcer.start_service()
+
+        self.shutdownOnInterrupt()
+        comm.waitForShutdown()
+
+        self.announcer.stop()
+        return 0
     
