@@ -13,14 +13,18 @@
 
 import os
 import string
-import Ice
+
 import json
 import logging
 import random
 import threading
+import IceStorm
+import Ice
 Ice.loadSlice('IceFlix.ice')
 import IceFlix
 from server import Services
+from service_announcement import ServiceAnnouncementsListener
+from service_announcement import ServiceAnnouncementsSender
 
 DEFAULT_TOPICMANAGER_PROXY = 'IceStorm/TopicManager:tcp -p 10000'
 
@@ -32,6 +36,7 @@ CURRENT_TOKEN = 'current_token'
 PASSWORD_HASH = 'password_hash'
 TOKEN_SIZE = 30
 
+TOPIC_MANAGER_PROXY = 'IceStorm/TopicManager:tcp -p 10000'
 
 def build_new_token():
 
@@ -49,7 +54,7 @@ class Authenticator(IceFlix.Authenticator):
 
     def __init__(self):
 
-        self._users_ =  USERS_FILE
+        self._users_ = USERS_FILE
         self.users = IceFlix.UsersDB()
         self.active_tokens = set()
         self.service_id = None
@@ -270,3 +275,64 @@ class Revocations(IceFlix.Revocations):
             
         else:
             print("El origen no corresponde al Authenticator")
+
+
+class AuthenticatorApp(Ice.Application):
+    
+    """ Example Ice.Application for a Main service """
+
+    def __init__(self):
+        super().__init__()
+        self.servant = Authenticator()
+        self.proxy = None
+        self.adapter = None
+        self.announcer = None
+        self.subscriber = None
+
+    def setup_announcements(self):
+        
+        """ Configure the announcements sender and listener """
+
+        communicator = self.communicator()
+        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+            communicator.propertyToProxy("IceStorm.TopicManager"),
+        )
+
+        try:
+            topic = topic_manager.create("ServiceAnnouncements")
+        
+        except IceStorm.TopicExists:
+            topic = topic_manager.retrieve("ServiceAnnouncements")
+
+        self.announcer = ServiceAnnouncementsSender(
+            topic,
+            self.servant.service_id,
+            self.proxy,
+        )
+
+        self.subscriber = ServiceAnnouncementsListener(
+            self.servant, self.servant.service_id, IceFlix.AuthPrx
+        )
+
+        subscriber_prx = self.adapter.addWithUUID(self.subscriber)
+        topic.subscribeAndGetPublisher({}, subscriber_prx)
+
+    def run(self, args):
+        
+        """ Run the application, adding the needed objects to the adapter """
+        
+        logging.info("Running Authenticator application")
+        comm = self.communicator()
+        self.adapter = comm.createObjectAdapter("Authenticator")
+        self.adapter.activate()
+
+        self.proxy = self.adapter.addWithUUID(self.servant)
+
+        self.setup_announcements()
+        self.announcer.start_service()
+
+        self.shutdownOnInterrupt()
+        comm.waitForShutdown()
+
+        self.announcer.stop()
+        return 0

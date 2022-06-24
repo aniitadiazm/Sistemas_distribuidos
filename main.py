@@ -59,7 +59,7 @@ class Main(IceFlix.Main):
         
         """ Devuelve un valor booleano para comprobar si el token proporcionado corresponde o no con el administrativo """
         
-        if admin == TOKEN_ADMIN:
+        if admin == TOKEN_ADMIN:  # Si el token recibido es administrador
             return True
         
         return False
