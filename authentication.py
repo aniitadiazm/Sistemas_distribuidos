@@ -99,7 +99,7 @@ class Authenticator(IceFlix.Authenticator):
 
         current_hash = self.users[user].get(PASSWORD_HASH, None)  # Obtener la contraseña actual del usuario
 
-        if not current_hash:  # Si el usuario se encuentra vacío
+        if not current_hash:  # Si la contraseña del usuario se encuentra vacía
             raise IceFlix.Unauthorized()
 
         if current_hash != password_hash:  # Si las contraseñas no coinciden
@@ -108,8 +108,7 @@ class Authenticator(IceFlix.Authenticator):
         current_token = self.users[user].get(CURRENT_TOKEN, None)  # Obtener el token actual del usuario
         
         if current_token:  # Si el token existe
-            
-                self.active_tokens.remove(current_token)  # Lo eliminamos de entre los tokens activos
+                self.active_tokens.remove(current_token)  # Lo eliminamos de los tokens activos
         
         new_token = build_new_token()  # Construimos el nuevo token
 
@@ -219,19 +218,19 @@ class UserUpdates(IceFlix.UserUpdates):
         """ Se emite cuando un nuevo usuario es creado por el administrador """
         
         if self.ServiceAnnouncementsListener.validService_id(service_id, "Authenticator" ):  # Validar el id comprobando que sea Authenticator
-            self.servant.users[user].get(PASSWORD_HASH, None) = password_hash  # Obtener los datos del usuario
+            self.servant.users[user][PASSWORD_HASH] = password_hash # Establecer los datos del usuario
             self.servant.commitChanges()  # Actualizar los cambios
         
         else:
             print("El origen no corresponde al Authenticator")
         
-    def newToken(self, user, current_token, service_id, current = None):
+    def newToken(self, user, new_token, service_id, current = None):
         
         """ Se emite cuando un usuario llama satisfactoriamente a la función refreshAuthorization y un nuevo token es generado """
         
         if self.ServiceAnnouncementsListener.validService_id(service_id, "Authenticator" ):  # Validar el id comprobando que sea Authenticator
-            self.servant.users[user].get(CURRENT_TOKEN, None) = current_token  # Obtener el token del usuario
-            time = threading.Timer(120, self.servant.revocationsPublisher.revokeToken[current_token, service_id])
+            self.servant.users[user][CURRENT_TOKEN] = new_token  # Establecer el token del usuario
+            time = threading.Timer(120, self.servant.revocationsPublisher.revokeToken, [user, service_id]) # Eliminar el token del usuario pasados 2 minutos
             time.start()
             
             print(self.servant.users)  # Mostrar los datos de los usuarios
@@ -256,7 +255,7 @@ class Revocations(IceFlix.Revocations):
         if self.ServiceAnnouncementListener.validService_id(service_id, "Authenticator"):    # Validar el id comprobando que sea Authenticator
             
             if user in self.servant.users:  # Si el usuario existe
-                del self.servant.users[user].get(PASSWORD_HASH, None)  # Eliminar la contraseña del usuario 
+                del self.servant.users[user]  # Eliminar el usuario
             self.servant.commitChanges()  # Actualizar los cambios
             
         else:
@@ -269,7 +268,8 @@ class Revocations(IceFlix.Revocations):
         if self.ServiceAnnouncementListener.validService_id(service_id, "Authenticator"):  # Validar el id comprobando que sea Authenticator
             
             if user in self.servant.users:  # Si el usuario existe
-                del self.servant.users[user].get(CURRENT_TOKEN, None)  # Eliminar el token del usuario
+                token = self.servant.users[user].get(CURRENT_TOKEN, None)  # Obtener el token del usuario
+                del token  # Eliminar el token del usuario
                 
             print(self.servant.users)  # Mostrar los datos de los usuarios
             
