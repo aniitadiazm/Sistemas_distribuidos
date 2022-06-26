@@ -1,6 +1,17 @@
 {
+
     "ana": {
+
         "current_token": "5efd1af7103fe7e9eb87072a6206c5",
         "password_hash": "44b410456969db31c356a9cc419137"
+        
+    },
+
+    "angela": {
+
+        "current_token": "a665a45920422f9d417e4867efdc4f",
+        "password_hash": "b8a04a1f3fff1fa07e998e86f7f7a27"
+
     }
+
 }

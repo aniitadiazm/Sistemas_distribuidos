@@ -12,7 +12,7 @@
 
 import Ice
 import json
-import uuid
+import os
 import sqlite3
 import random
 import logging
@@ -25,8 +25,11 @@ from service_announcement import ServiceAnnouncementsListener
 from service_announcement import ServiceAnnouncementsSender
 
 CATALOG_FILE = 'catalog.json'
+TAGS_FILE = 'tags.json'
 
-def read_tags_db():
+MEDIA_NAME = 'name'
+
+def read_tags():
     
     """ Carga la base de datos """
     
@@ -51,57 +54,86 @@ class MediaCatalog(IceFlix.MediaCatalog):
         
         """ Inicializar el Catálogo """
         
-        self.service_id = str(uuid.uuid4())
-        self.catalog = CatalogDB(self.service_id + '.db')
-        self.tags_db = 'tags_' + self.service_id + '.json'
+        self._tags_ = TAGS_FILE
+        self._catalog_ = CATALOG_FILE
+        self.catalog = IceFlix.MediaDB()
+        self.tags = IceFlix.MediaDB()
+        self.service_id = None
         self.services = Services()
-        self.proxy = {}
-        self.updateSubscriber = None
+        self.catalogUpdate = None
+        self.catalogProvider = {}
+        self.mediaProvider = {}
         self.ServiceAnnouncementsListener = None
+        
+        if os.path.exists(CATALOG_FILE) and os.path.exists(TAGS_FILE): 
+            self.refresh()  # Cargar el catálogo y las tags
+            
+        else:
+            self.commitChanges()  # Recargar los cambios realizados sobre el almacén de datos
     
+    def refresh(self):
+        
+        """ Carga el catálogo y las tags """
+
+        logging.debug('Cargando el catálogo y las tags')
+        
+        with open(CATALOG_FILE, 'r') as contents:  # Abrir el archivo json en modo lectura
+            self.catalog = json.load(contents)  # Cargar el contenido del json en catalog
+        
+        with open(TAGS_FILE, 'r') as contents:  # Abrir el archivo json en modo lectura
+            self.users = json.load(contents)  # Cargar las tags y los medios en users
+            self.tags = set([user.get(, None) for user in self.users.values()])  # Para cada uno de los usuarios, obtener su token válido
+
+        
+
+    def commitChanges(self):
+
+        """ Recarga los posibles cambios realizados sobre el almacén de datos """
+
+        logging.debug('Actualizando el almacén de datos')
+        
+        with open(CATALOG_FILE, 'w') as contents:  # Abrir el archivo json en modo escritura
+            json.dump(self.catalog, contents)  # Serializar el catalog en el archivo contents, con indentación 4 y ordenados por su clave
+
     def getTile(self, media_id, token, current=None):
         
         """ Permite realizar la búsqueda de un medio conocido su identificador """
         
-        try:
-            user = Authenticator.whois(token)  # Descubirir el nombre de usuario a partir de su token
+        if media_id not in self.catalog:  # Si no se localiza el id del medio
+            raise IceFlix.TemporaryUnavailable()
+
+        for media_id in self.catalog:  #Recorrer las tags
             
-        except IceFlix.Unauthorized:
-            user = 'NOT_FOUND'
+            if media_id in self.catalog:  # Si el id del medio se encuentra entre el catálogo
+                name = self.catalog[media_id].get(MEDIA_NAME, None)  # obtener el título del medio correspondiente a ese identificador
         
-        if not self.catalog.in_catalog(media_id):  # Si no se localiza el id del medio
-            raise IceFlix.WrongMediaId(media_id)
-
-        if media_id not in self.proxy:  #Si no existe el proxy
-            raise IceFlix.TemporaryUnavailable
-
-        tags_db = read_tags_db()  # Leer las etiquetas de la base de datos
-
-        for user in tags_db:  #Recorrer las tags
-            
-            if media_id in tags_db[user]:  # Si el id del medio se encuentra entre las etiquetas del usuario
-                tags_list = [tag for tag in tags_db[user][media_id]]  # guardar las etiquetas para ese medio y ese usuario
-        
-        checked = Media(media_id, self.proxy[media_id][-1], MediaInfo(self.catalog.get_name_by_id(media_id), tags_list))
-        return checked
+        return name
     
     def getTilesByName(self, name, exact, current=None):
         
         """ Permite realizar una búsqueda de medios usando su nombre """
         
-        tiles = self.catalog.get_id_by_name(name, exact)  # Localizar el id del medio por su nombre
-        return tiles
+        tiles_list = []
+        for media in self.catalog:  #Recorrer el catálogo 
+                name_media = self.catalog[media].get(MEDIA_NAME, None)  # obtener el nombre del medio correspondiente a cada identificador
+                
+                if name_media == name:
+                    tiles_list.append(self.catalog[media])  # Añadir el medio a la lista
+                    exact = True
+                
+                elif name_media.find(name):  # Si el nombre contiene el nombre de la búsqueda
+                    tiles_list.append(self.catalog[media])  # Añadir el medio a la lista
+                    exact = False
+                    
+                else:
+                    pass
+        
+        return tiles_list
     
     def getTilesByTags(self, tags, AllTags, token, current=None):
         
         """ Permite realizar búsquedas de medios en función de los tags definidos por el usuario """
         
-        try:
-            user = Authenticator.whois(token)  # Descubirir el nombre de usuario a partir de su token
-            
-        except IceFlix.Unauthorized:
-            user = 'NOT_FOUND'
-
         tags_db = read_tags_db()  # Leer las etiquetas de la base de datos
         
         if user in tags_db:  # Si el usuario contiene las tags
@@ -284,7 +316,10 @@ class CatalogUpdates(IceFlix.CatalogUpdates):
         """ Se emite cuando el administrador modifica el nombre de un medio en una instancia """
         
         if self.ServiceAnnouncementsListener.validService_id(service_id, "MediaCatalog"):  # Si los ids de los servicios coinciden o el medio no se encuentra en el catálogo
-
+            
+            if media_id not in self.tags:  # Si no se encuentra el usuario
+                raise IceFlix.Unauthorized()
+            
             self.servant.catalog.rename_media(media_id, name)  # Renombrar el medio a través de su id
         
         else:

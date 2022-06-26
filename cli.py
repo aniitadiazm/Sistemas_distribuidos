@@ -3,7 +3,7 @@
 import logging
 import sys
 
-from iceflix.main import MainApp
+from main import MainApp
 
 
 def setup_logging():

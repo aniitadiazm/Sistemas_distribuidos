@@ -64,16 +64,16 @@ class Authenticator(IceFlix.Authenticator):
         self.ServiceAnnouncementsListener = None
 
         if os.path.exists(USERS_FILE): 
-            self.refresh()  # Recargar los tokens
+            self.refresh()  # Cargar los usuarios
             
         else:
             self.commitChanges()  # Recargar los cambios realizados sobre el almacén de datos
 
     def refresh(self):
         
-        """ Recarga los tokens de los usuarios """
+        """ Recarga los datos de los usuarios y sus tokens """
 
-        logging.debug('Cargando los tokens de los usuarios')
+        logging.debug('Cargando los usuarios')
         
         with open(USERS_FILE, 'r') as contents:  # Abrir el archivo json en modo lectura
             self.users = json.load(contents)  # Cargar el contenido del json en users
