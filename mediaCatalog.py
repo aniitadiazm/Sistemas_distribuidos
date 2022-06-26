@@ -30,24 +30,6 @@ TAGS_FILE = 'tags.json'
 
 MEDIA_NAME = 'name'
 
-def read_tags():
-    
-    """ Carga la base de datos """
-    
-    with open(CATALOG_FILE, 'r') as contents:  # Abrir el archivo json en modo lectura
-        tags = json.load(contents)  # Cargar el contenido del json en tags
-        
-    return tags
-
-
-def write_tags_db(tags):
-    
-    """ Escribe las tags en la base de datos """
-    
-    with open(CATALOG_FILE, 'w') as file:
-        json.dump(tags, file)
-        file.close()
-
 
 class MediaCatalog(IceFlix.MediaCatalog):
     
@@ -166,59 +148,18 @@ class MediaCatalog(IceFlix.MediaCatalog):
         
         """ Permite añadir una lista de tags a un medio concreto """
        
-        try:
-            user = Authenticator.whois(token)  # Descubirir el nombre de usuario a partir de su token
-        
-        except IceFlix.Unauthorized:
-            user = 'NOT_FOUND'
-
-        if not self.catalog.in_catalog(media_id):  # Si no se localiza el id del medio
-            raise IceFlix.WrongMediaId(media_id)
-
-        tags_db = read_tags_db()  # Leer las etiquetas de la base de datos
-
-        if user in tags_db and media_id in tags_db[user]:  # Si el usuario contiene las tags y el medio contiene las tags del usuario
-            for tag in tags:  # Recorrer las tags
-                tags_db[user][media_id].append(tag)  # Añadir la tag correspondiente al usuario y al medio
-                
-        elif user in tags_db:  # Si solo el usuario contiene las tags
-            tags_db[user][media_id] = tags  # Añadir las tags al usuario y al medio
-            
-        else:  # Si no
-            tags_list = {}
-            tags_list[media_id] = tags  # Añadimos las etiqueta al medio
-            tags_db[user] = tags_list  # Añadimos las etiquetas del medio al usuario
-
-        write_tags_db(tags_db)
-        self.updateSubscriber.publisher.addTags(media_id, tags, user, self.service_id)
     
     def renameTile(self, media_id, name, token, current=None): # pylint: disable=invalid-name, unused-argument
         
         '''Renombra un medio.'''
         
-        mainService = random.choice(list(self.discover_subscriber.mainServices.values()))
-
-        if not mainService.isAdmin(token):
-            raise IceFlix.Unauthorized
-
-        if not self.catalog.in_catalog(media_id):
-            raise IceFlix.WrongMediaId(media_id)
-
-        self.catalog.rename_media(name, media_id)
-        self.updateSubscriber.publisher.renameTile(media_id, name, self.service_id)
+        
     
     def updateDB(self, valuesDB, service_id, current = None):
 
         """ Actualiza la base de datos de la instancia con los usuarios y tokens más recientes """
 
-        logging.info("Recopilando la base de datos de %s para %s", service_id, self.service_id)
-
-        if self.ServiceAnnouncementsListener.validService_id(service_id, "MediaCatalog"):
-            self.tags_db = valuesDB
-            print(self.tags_db)
         
-        else:
-            print("Error al obtener la base de datos")
 
 
 class CatalogDB():
