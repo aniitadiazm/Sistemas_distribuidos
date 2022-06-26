@@ -10,6 +10,7 @@
 # pylint: disable=C0413
 # pylint: disable=W0613
 
+from sqlalchemy import false
 import Ice
 import json
 import os
@@ -81,11 +82,8 @@ class MediaCatalog(IceFlix.MediaCatalog):
             self.catalog = json.load(contents)  # Cargar el contenido del json en catalog
         
         with open(TAGS_FILE, 'r') as contents:  # Abrir el archivo json en modo lectura
-            self.users = json.load(contents)  # Cargar las tags y los medios en users
-            self.tags = set([user.get(, None) for user in self.users.values()])  # Para cada uno de los usuarios, obtener su token válido
-
-        
-
+            self.tags = json.load(contents)  # Cargar las tags y los medios en tags
+     
     def commitChanges(self):
 
         """ Recarga los posibles cambios realizados sobre el almacén de datos """
@@ -113,40 +111,55 @@ class MediaCatalog(IceFlix.MediaCatalog):
         
         """ Permite realizar una búsqueda de medios usando su nombre """
         
+        exact = false
         tiles_list = []
         for media in self.catalog:  #Recorrer el catálogo 
                 name_media = self.catalog[media].get(MEDIA_NAME, None)  # obtener el nombre del medio correspondiente a cada identificador
                 
                 if name_media == name:
-                    tiles_list.append(self.catalog[media])  # Añadir el medio a la lista
+                    tiles_list.append(self.catalog[media].get(MEDIA_NAME, None))  # Añadir el medio a la lista
                     exact = True
                 
-                elif name_media.find(name):  # Si el nombre contiene el nombre de la búsqueda
-                    tiles_list.append(self.catalog[media])  # Añadir el medio a la lista
+                if name_media.find(name):  # Si el nombre contiene el nombre de la búsqueda
+                    tiles_list.append(self.catalog[media].get(MEDIA_NAME, None))  # Añadir el medio a la lista
                     exact = False
-                    
-                else:
-                    pass
         
+        print(f'exact =  {exact}')
         return tiles_list
     
-    def getTilesByTags(self, tags, AllTags, token, current=None):
+    def getTilesByTags(self, tags_search, inludeAllTags, token, current=None):
         
         """ Permite realizar búsquedas de medios en función de los tags definidos por el usuario """
         
-        tags_db = read_tags_db()  # Leer las etiquetas de la base de datos
+        main_service = self.services.getMainService()
+        user = main_service.getAuthenticator().whois(token)
         
-        if user in tags_db:  # Si el usuario contiene las tags
-            tiles_list = []
+        medias_list = []
+        tiles_list = []
+        counter = 0
+        
+        for tag in self.tags[user]:  # Recorrer las tags del usuario
             
-            for media in tags_db[user]:  # Recorrer las tags del usuario
+            for tag_search in tags_search:  # Recorrer las tags a buscar
                 
-                if not AllTags and any(tag in tags_db[user][media] for tag in tags):
-                    tiles_list.append(media)
+                if tag == tag_search:  # Si las etiquetas coindicen
                     
-                elif AllTags and all([(tag in tags) for tag in tags_db[user][media]]):
-                    tiles_list.append(media)
-
+                    counter = counter + 1
+                    
+                    for id_media in self.tags[user][tag]: # Recorrer los medios de ese user y tag
+                        medias_list.append(id_media) # Añadir a la lista los medios
+        
+        for id_media_catalog in self.catalog:  # Recorrer la lista de los medios del catalogo
+            
+            for id_media in medias_list:  # Recorrer la lista de los medios del usuario con esas etiquetas
+                
+                if id_media == id_media_catalog:  # Si los ids coinciden
+                    tiles_list.append(self.catalog[id_media_catalog]).get(MEDIA_NAME, None)  # Guardar el titulo del medio en la lista
+        
+        if counter == len(tags_search):  # Si el usuario tiene todas las tags buscadas
+            includeAllTags = True
+        
+        print(f'includeAllTags =  {includeAllTags}')
         return tiles_list
 
     def addTags(self, media_id, tags, token, current=None): # pylint: disable=invalid-name, unused-argument

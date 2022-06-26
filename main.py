@@ -71,7 +71,7 @@ class Main(IceFlix.Main):
         active = False
         while active is False:
             
-            if self.volatileServices.authenticators != []:    
+            if self.volatileServices.authenticators != []:
                 randomAuth = random.choice(self.volatileServices.authenticators)  # Selecciona un aleatorio de la lista
                 
                 try:
@@ -95,7 +95,7 @@ class Main(IceFlix.Main):
         active = False
         while active is False:
             
-            if self.volatileServices.mediaCatalogs != []:                
+            if self.volatileServices.mediaCatalogs != []:
                 randomCatalog = random.choice(self.volatileServices.mediaCatalogs)  # Selecciona un aleatorio de la lista
             
                 try:
