@@ -2,6 +2,18 @@
 
 You can reuse it in all your services """
 
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+# pylint: disable=C0103
+# pylint: disable=C0301
+# pylint: disable=C0113
+# pylint: disable=E0401
+# pylint: disable=C0103
+# pylint: disable=C0411
+# pylint: disable=C0413
+# pylint: disable=W0613
+
 import logging
 import os
 import threading

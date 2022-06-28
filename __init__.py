@@ -1,4 +1,4 @@
-"""iceflix package definition."""
+""" iceflix package definition """
 
 try:
     import IceFlix

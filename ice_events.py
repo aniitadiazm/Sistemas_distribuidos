@@ -1,8 +1,23 @@
+""" Manejador de objetos IceStorm """
+
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+# pylint: disable=C0103
+# pylint: disable=C0301
+# pylint: disable=C0113
+# pylint: disable=E0401
+# pylint: disable=C0103
+# pylint: disable=C0411
+# pylint: disable=C0413
+# pylint: disable=W0613
+
 import logging
 
 import IceStorm
 
 from common import ICESTORM_PROXY_PROPERTY
+
 # pylint: disable=W1202
 # pylint: disable=E1101
 # pylint: disable=W0231
@@ -17,7 +32,7 @@ class IceEventsError(Exception):
 
     def __str__(self):
         
-        return 'IceStorm error: {}'.format(self._msg_)
+        return "IceStorm error: {}".format(self._msg_)
 
 
 class IceEvents:
@@ -39,8 +54,8 @@ class IceEvents:
             proxy = self._communicator_.propertyToProxy(self._property_name_)
             
             if proxy is None:
-                logging.error('La propiedad "{}" resulta ser un proxy nulo'.format(self._property_name_))
-                raise IceEventsError('Falta la propiedad: {}'.format(self._property_name_))
+                logging.error("La propiedad {} resulta ser un proxy nulo".format(self._property_name_))
+                raise IceEventsError("Falta la propiedad: {}".format(self._property_name_))
             
             self._topic_manager_ = IceStorm.TopicManagerPrx.checkedCast(proxy)
             
@@ -54,20 +69,20 @@ class IceEvents:
 
     def get_topic(self, name):
         
-        """ Get IceStorm::Topic object"""
+        """ Get IceStorm::Topic object """
         
         try:
             topic = self.topic_manager.retrieve(name)
             
         except IceStorm.NoSuchTopic:
-            logging.warning('IceStorm::Topic({}) not found!'.format(name))
+            logging.warning("IceStorm::Topic({}) not found!".format(name))
             topic = self.topic_manager.create(name)
             
         return topic
 
     def get_publisher(self, topic_name):
         
-        """Get IceStorm::Publisher object """
+        """ Get IceStorm::Publisher object """
         
         topic = self.get_topic(topic_name)
         return topic.getPublisher()
