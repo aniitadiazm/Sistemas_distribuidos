@@ -156,7 +156,20 @@ class MediaCatalog(IceFlix.MediaCatalog):
     def addTags(self, media_id, tags, token, current=None): # pylint: disable=invalid-name, unused-argument
         
         """ Permite añadir una lista de tags a un medio concreto """
-       
+
+        main_service = self.services.getMainService()
+        user = main_service.getAuthenticator().whois(token)
+
+        check = False
+
+        for tags in self._tags_:
+            if self._tags_[media_id] == media_id:
+                check = True
+        
+        if check == False:
+            raise IceFlix.WrongMediaId
+
+        self.catalogUpdate.addTags(media_id, tags, user, self.service_id)
     
     def renameTile(self, media_id, name, token, current=None): # pylint: disable=invalid-name, unused-argument
         
@@ -292,20 +305,18 @@ class CatalogUpdates(IceFlix.CatalogUpdates):
         
         """ Se emite cuando un usuario añade satisfactoriamente tags a algún medio """
         
-        if self.ServiceAnnouncementsListener.validService_id(service_id, "MediaCatalog"):  # Si los ids de los servicios coinciden o el medio no se encuentra en el catálogo
+        if self.serviceAnnouncements.validSrvid(service_id, "MediaCatalog"):# Si los ids de los servicios coinciden o el medio no se encuentra en el catálogo
 
-            tags_db = read_tags_db()  # Leer las etiquetas de la base de datos
+            for media in self.servant._tags_:  # Recorrer los medios
+                if media == media_id:  # Si los ids coinciden
+                    if user not in self.servant._tags_[media]:  # Si el usuario no se encuentra en ese medio
+                        self.servant._tags_[media][user] = tags  # Creamos el usuario y añadimos las etiquetas
 
-            if user in tags_db and media_id in tags_db[user]:  # Si el usuario contiene las tags y el medio contiene las tags del usuario 
-                for tag in tags:  # Recorrer las etiquetas
-                    tags_db[user][media_id].append(tag)  # para cada usuario y medio añadir su tag correspondiente
-                    
-            else:
-                tags_list = {}
-                tags_list[media_id] = tags # Añadimos las etiquetas al medio
-                tags_db[user] = tags_list  # Añadimos las etiquetas del medio al usuario
-    
-            write_tags_db(tags_db[user])  # Escribir las tags del usuario
+                    else:  # Si el usuario ya estaba en ese medio
+                        for tag in tags:  # Recorrer las etiquetas
+                            self.servant._tags_[media][user].append(tag)  # Añadírselas al usuario
+
+            self.servant.commitChanges()  # Actualizar los cambios
         
         else:
             print("El origen no corresponde al MediaCatalog")
