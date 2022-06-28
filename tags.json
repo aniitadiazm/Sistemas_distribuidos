@@ -1,17 +1,18 @@
 {
 
-    "ana": {
+    "44b410456969db31c356a9cc419137": {
 
-        "suspense": [ "123", "456" ],
+        "ana": [ "suspense", "terror" ],
 
-        "acción": [ "789", "1011" ]
+        "angela": [ "suspense", "humor" ]
 
     },
 
     "angela": {
 
-        "aventuras":[ "456" ]
+        "ana":[ "humor" ],
 
+        "angela":[ "romántica" ]
     }
 
 }

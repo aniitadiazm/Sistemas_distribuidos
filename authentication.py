@@ -13,14 +13,13 @@
 
 import os
 import string
-
 import json
 import logging
 import random
 import threading
-import IceStorm
 import Ice
-Ice.loadSlice('IceFlix.ice')
+import IceStorm
+Ice.loadSlice('iceflix.ice')
 import IceFlix
 from server import Services
 from service_announcement import ServiceAnnouncementsListener
@@ -32,8 +31,6 @@ USERS_FILE = 'users.json'
 
 # pylint: enable=C0413
 
-CURRENT_TOKEN = 'current_token'
-PASSWORD_HASH = 'password_hash'
 TOKEN_SIZE = 30
 
 TOPIC_MANAGER_PROXY = 'IceStorm/TopicManager:tcp -p 10000'
@@ -56,7 +53,7 @@ class Authenticator(IceFlix.Authenticator):
 
         self._users_ = USERS_FILE
         self.users = IceFlix.UsersDB()
-        self.active_tokens = set()
+        self.active_tokens = {}
         self.service_id = None
         self.services = Services()
         self.updatePublisher = None
@@ -77,7 +74,6 @@ class Authenticator(IceFlix.Authenticator):
         
         with open(USERS_FILE, 'r') as contents:  # Abrir el archivo json en modo lectura
             self.users = json.load(contents)  # Cargar el contenido del json en users
-            self.active_tokens = set([user.get(CURRENT_TOKEN, None) for user in self.users.values()])  # Para cada uno de los usuarios, obtener su token válido
 
     def commitChanges(self):
 
@@ -97,7 +93,7 @@ class Authenticator(IceFlix.Authenticator):
         if user not in self.users:  # Si no se encuentra el usuario
             raise IceFlix.Unauthorized()
 
-        current_hash = self.users[user].get(PASSWORD_HASH, None)  # Obtener la contraseña actual del usuario
+        current_hash = self.users[user].values()  # Obtener la contraseña actual del usuario
 
         if not current_hash:  # Si la contraseña del usuario se encuentra vacía
             raise IceFlix.Unauthorized()
@@ -105,7 +101,7 @@ class Authenticator(IceFlix.Authenticator):
         if current_hash != password_hash:  # Si las contraseñas no coinciden
             raise IceFlix.Unauthorized()
 
-        current_token = self.users[user].get(CURRENT_TOKEN, None)  # Obtener el token actual del usuario
+        current_token = self.active_tokens[user]  # Obtener el token actual del usuario
         
         if current_token:  # Si el token existe
                 self.active_tokens.remove(current_token)  # Lo eliminamos de los tokens activos
@@ -120,16 +116,16 @@ class Authenticator(IceFlix.Authenticator):
 
         """ Indica si un token dado es válido o no """
 
-        return True if user in self.active_tokens else False  # Comprobar si el token de un usuario se encuentra entre los tokens activos
+        return True if user in self.active_tokens.keys() else False  # Comprobar si el token de un usuario se encuentra entre los tokens activos
 
-    def whois(self, user, current = None):
+    def whois(self, token, current = None):
 
         """ Permite descubrir el nombre del usuario a partir de un token válido """
 
-        if user not in self.active_tokens:  # Si el token no existe entre los tokens de los usuarios
+        if token not in self.active_tokens.keys():  # Si el token no existe entre los tokens de los usuarios
             raise IceFlix.Unauthorized
 
-        return self.users[user].get(CURRENT_TOKEN, None)  # Devolver el nombre de usuario correspondiente al token
+        return self.active_tokens[token]  # Devolver el nombre de usuario correspondiente al token
 
     def addUser(self, user, password_hash, admin, current = None):
 
@@ -192,7 +188,7 @@ class Authenticator(IceFlix.Authenticator):
 
     def updateDB(self, valuesDB, service_id, current = None):
 
-        """ Actualiza la base de datos de la instancia con los usuarios y tokens más recientes """
+        """ Actualiza la base de datos de la instancia con los usuarios más recientes """
 
         logging.info("Recopilando la base de datos de %s para %s", service_id, self.service_id)
 
@@ -218,7 +214,7 @@ class UserUpdates(IceFlix.UserUpdates):
         """ Se emite cuando un nuevo usuario es creado por el administrador """
         
         if self.ServiceAnnouncementsListener.validService_id(service_id, "Authenticator" ):  # Validar el id comprobando que sea Authenticator
-            self.servant.users[user][PASSWORD_HASH] = password_hash # Establecer los datos del usuario
+            self.servant.users[user] = password_hash # Establecer los datos del usuario
             self.servant.commitChanges()  # Actualizar los cambios
         
         else:
@@ -229,7 +225,7 @@ class UserUpdates(IceFlix.UserUpdates):
         """ Se emite cuando un usuario llama satisfactoriamente a la función refreshAuthorization y un nuevo token es generado """
         
         if self.ServiceAnnouncementsListener.validService_id(service_id, "Authenticator" ):  # Validar el id comprobando que sea Authenticator
-            self.servant.users[user][CURRENT_TOKEN] = new_token  # Establecer el token del usuario
+            self.servant.active_tokens[user] = new_token  # Establecer el token del usuario
             time = threading.Timer(120, self.servant.revocationsPublisher.revokeToken, [user, service_id]) # Eliminar el token del usuario pasados 2 minutos
             time.start()
             
@@ -268,7 +264,7 @@ class Revocations(IceFlix.Revocations):
         if self.ServiceAnnouncementListener.validService_id(service_id, "Authenticator"):  # Validar el id comprobando que sea Authenticator
             
             if user in self.servant.users:  # Si el usuario existe
-                token = self.servant.users[user].get(CURRENT_TOKEN, None)  # Obtener el token del usuario
+                token = self.servant.active_tokens[user]  # Obtener el token del usuario
                 del token  # Eliminar el token del usuario
                 
             print(self.servant.users)  # Mostrar los datos de los usuarios

@@ -163,6 +163,7 @@ class MainApp(Ice.Application):
         self.adapter.activate()
 
         self.proxy = self.adapter.addWithUUID(self.servant)
+        print(self.proxy, flush = None)
 
         self.setup_announcements()
         self.announcer.start_service()

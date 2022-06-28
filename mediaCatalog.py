@@ -27,7 +27,6 @@ from service_announcement import ServiceAnnouncementsSender
 
 CATALOG_FILE = 'catalog.json'
 TAGS_FILE = 'tags.json'
-
 MEDIA_NAME = 'name'
 
 
@@ -39,8 +38,6 @@ class MediaCatalog(IceFlix.MediaCatalog):
         
         self._tags_ = TAGS_FILE
         self._catalog_ = CATALOG_FILE
-        self.catalog = IceFlix.MediaDB()
-        self.tags = IceFlix.MediaDB()
         self.service_id = None
         self.services = Services()
         self.catalogUpdate = None
@@ -79,35 +76,50 @@ class MediaCatalog(IceFlix.MediaCatalog):
         
         """ Permite realizar la búsqueda de un medio conocido su identificador """
         
-        if media_id not in self.catalog:  # Si no se localiza el id del medio
-            raise IceFlix.TemporaryUnavailable()
+        main_service = self.se.getMainService()
+        user = main_service.getAuthenticator().whois(token)
+        object_media = IceFlix.Media()
+        object_media_info = IceFlix.MediaInfo()
 
-        for media_id in self.catalog:  #Recorrer las tags
-            
-            if media_id in self.catalog:  # Si el id del medio se encuentra entre el catálogo
-                name = self.catalog[media_id].get(MEDIA_NAME, None)  # obtener el título del medio correspondiente a ese identificador
+        if media_id in self._catalog_:  # Si el medio existe
+            name = self._catalog_[media_id]
+            object_media.mediaId = media_id
+            object_media_info.name = name
+            object_media.info = object_media_info
+            print(self.mediaProvider)
+
+            if id in self.mediaProvider:
+                object_media.provider=self.dicProvider[self.mediaProvider[id]]
+
+            else:
+                raise IceFlix.TemporaryUnavailable
         
-        return name
+        else:
+            raise IceFlix.WrongMediaId
+
+        return object_media
     
     def getTilesByName(self, name, exact, current=None):
         
         """ Permite realizar una búsqueda de medios usando su nombre """
         
-        exact = false
-        tiles_list = []
-        for media in self.catalog:  #Recorrer el catálogo 
-                name_media = self.catalog[media].get(MEDIA_NAME, None)  # obtener el nombre del medio correspondiente a cada identificador
-                
-                if name_media == name:
-                    tiles_list.append(self.catalog[media].get(MEDIA_NAME, None))  # Añadir el medio a la lista
-                    exact = True
-                
-                if name_media.find(name):  # Si el nombre contiene el nombre de la búsqueda
-                    tiles_list.append(self.catalog[media].get(MEDIA_NAME, None))  # Añadir el medio a la lista
-                    exact = False
+        list_to_return = []
+
+        if exact == True:
+
+            for media in self._catalog_:
+
+                if name.lower() == self._catalog_[media].lower():
+                    list_to_return.append(self._catalog_[media])
+
+        else:
+
+            for media in self._catalog_:
+
+                if name.lower() in self._catalog_[media].lower():
+                    list_to_return.append(self._catalog_[media])
         
-        print(f'exact =  {exact}')
-        return tiles_list
+        return list_to_return
     
     def getTilesByTags(self, tags_search, inludeAllTags, token, current=None):
         
