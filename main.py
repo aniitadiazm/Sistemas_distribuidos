@@ -14,11 +14,14 @@
 import logging
 import random
 import IceStorm
+
+from service_announcement import ServiceAnnouncementsListener
+from service_announcement import ServiceAnnouncementsSender
+
 import Ice
 Ice.loadSlice('IceFlix.ice')
 import IceFlix
-from service_announcement import ServiceAnnouncementsListener
-from service_announcement import ServiceAnnouncementsSender
+
 
 
 TOKEN_ADMIN = "admin"

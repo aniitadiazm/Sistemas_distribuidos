@@ -24,12 +24,6 @@ def catalog_service():
     sys.exit(0)
 
 
-def streamprovider_service():
-    """Handles the `streamingservice` CLI command."""
-    print("Streaming service")
-    sys.exit(0)
-
-
 def authentication_service():
     """Handles the `authenticationservice` CLI command."""
     print("Authentication service")

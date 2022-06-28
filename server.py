@@ -3,8 +3,7 @@
 
 import random
 import Ice
-import IceStorm
-Ice.loadSlice('IceFlix.ice')
+Ice.loadSlice('iceflix.ice')
 import IceFlix
 
 class Services(Ice.Application):

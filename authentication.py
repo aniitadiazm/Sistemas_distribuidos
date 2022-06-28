@@ -1,3 +1,4 @@
+"""Module containing a template for a athentication service."""
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
@@ -17,13 +18,14 @@ import json
 import logging
 import random
 import threading
-import Ice
-import IceStorm
-Ice.loadSlice('iceflix.ice')
-import IceFlix
-from server import Services
+
 from service_announcement import ServiceAnnouncementsListener
 from service_announcement import ServiceAnnouncementsSender
+from server import Services
+
+import Ice
+Ice.loadSlice('IceFlix.ice')
+import IceFlix
 
 DEFAULT_TOPICMANAGER_PROXY = 'IceStorm/TopicManager:tcp -p 10000'
 
@@ -104,7 +106,7 @@ class Authenticator(IceFlix.Authenticator):
         current_token = self.active_tokens[user]  # Obtener el token actual del usuario
         
         if current_token:  # Si el token existe
-                self.active_tokens.remove(current_token)  # Lo eliminamos de los tokens activos
+                self.active_tokens.pop(current_token)  # Lo eliminamos de los tokens activos
         
         new_token = build_new_token()  # Construimos el nuevo token
 

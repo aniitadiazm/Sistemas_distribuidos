@@ -27,7 +27,6 @@ from service_announcement import ServiceAnnouncementsSender
 
 CATALOG_FILE = 'catalog.json'
 TAGS_FILE = 'tags.json'
-MEDIA_NAME = 'name'
 
 
 class MediaCatalog(IceFlix.MediaCatalog):
@@ -76,19 +75,17 @@ class MediaCatalog(IceFlix.MediaCatalog):
         
         """ Permite realizar la búsqueda de un medio conocido su identificador """
         
-        main_service = self.se.getMainService()
-        user = main_service.getAuthenticator().whois(token)
-        object_media = IceFlix.Media()
-        object_media_info = IceFlix.MediaInfo()
+        object_media = IceFlix.Media()  # Inicializar el objeto media
+        object_media_info = IceFlix.MediaInfo()  # Inicializar el objeto media info
 
         if media_id in self._catalog_:  # Si el medio existe
-            name = self._catalog_[media_id]
-            object_media.mediaId = media_id
-            object_media_info.name = name
-            object_media.info = object_media_info
+            name = self._catalog_[media_id]  # Guardar el nombre del medio en name
+            object_media.mediaId = media_id  # Asignar el id del medio al objeto media
+            object_media_info.name = name  # Asignar el nombre del medio al objeto media info
+            object_media.info = object_media_info  # Asignar el objeto media info al objeto media
             print(self.mediaProvider)
 
-            if id in self.mediaProvider:
+            if id in self.mediaProvider:  # Si el medio no tiene proxy asociado
                 object_media.provider=self.dicProvider[self.mediaProvider[id]]
 
             else:
@@ -105,19 +102,19 @@ class MediaCatalog(IceFlix.MediaCatalog):
         
         list_to_return = []
 
-        if exact == True:
+        if exact == True:  # Si el nombre a buscar es exactamente el mismo
 
-            for media in self._catalog_:
+            for media in self._catalog_:  # Recorrer el catálogo
 
-                if name.lower() == self._catalog_[media].lower():
-                    list_to_return.append(self._catalog_[media])
+                if name.lower() == self._catalog_[media].lower():  # Si los nombres coinciden
+                    list_to_return.append(self._catalog_[media])  # Añadir a la lista
 
-        else:
+        else:  # Si lo que buscamos es parte del nombre de un medio
 
-            for media in self._catalog_:
+            for media in self._catalog_:  # Recorrer el catálogo
 
-                if name.lower() in self._catalog_[media].lower():
-                    list_to_return.append(self._catalog_[media])
+                if name.lower() in self._catalog_[media].lower():  # Si el nombre contiene lo que se busca
+                    list_to_return.append(self._catalog_[media])  # Añadir a la lista
         
         return list_to_return
     
@@ -127,34 +124,34 @@ class MediaCatalog(IceFlix.MediaCatalog):
         
         main_service = self.services.getMainService()
         user = main_service.getAuthenticator().whois(token)
-        
-        medias_list = []
-        tiles_list = []
+        list_to_return = []
         counter = 0
-        
-        for tag in self.tags[user]:  # Recorrer las tags del usuario
-            
-            for tag_search in tags_search:  # Recorrer las tags a buscar
-                
-                if tag == tag_search:  # Si las etiquetas coindicen
-                    
-                    counter = counter + 1
-                    
-                    for id_media in self.tags[user][tag]: # Recorrer los medios de ese user y tag
-                        medias_list.append(id_media) # Añadir a la lista los medios
-        
-        for id_media_catalog in self.catalog:  # Recorrer la lista de los medios del catalogo
-            
-            for id_media in medias_list:  # Recorrer la lista de los medios del usuario con esas etiquetas
-                
-                if id_media == id_media_catalog:  # Si los ids coinciden
-                    tiles_list.append(self.catalog[id_media_catalog]).get(MEDIA_NAME, None)  # Guardar el titulo del medio en la lista
-        
-        if counter == len(tags_search):  # Si el usuario tiene todas las tags buscadas
-            includeAllTags = True
-        
-        print(f'includeAllTags =  {includeAllTags}')
-        return tiles_list
+        check = False
+
+        if includeAllTags is True:
+            for media_id in self._tags_:
+                if user in self._tags_[media_id]: 
+                    for tag in self._tags_[media_id][user]:
+                        for tag_search in tags_search:
+                            if tag == tag_search:
+                                counter = counter+1
+                                if counter == len(self._tags_[user]):
+                                    list_to_return.append(media_id)
+
+        else:
+            for media_id in self._tags_:
+                if user in self._tags_[media_id]:
+                    for tag in self._tags_[media_id][user]:
+                        for tag_search in tags_search:
+                            if tag == tag_search:
+                                id = media_id
+                                for id_search in list_to_return:
+                                    if id_search == id:
+                                        check = True
+                                if check == False:
+                                    list_to_return.append(media_id)
+
+        return list_to_return
 
     def addTags(self, media_id, tags, token, current=None): # pylint: disable=invalid-name, unused-argument
         
