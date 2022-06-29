@@ -18,7 +18,7 @@ import logging
 import os
 import threading
 
-from server import Services
+
 
 import Ice
 
@@ -57,7 +57,7 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
         self.catalogs = {}
         self.mains = {}
         self.known_ids = set()
-        self.services = Services()
+        
 
     def newService(self, service, service_id, current):  # pylint: disable=invalid-name,unused-argument
         

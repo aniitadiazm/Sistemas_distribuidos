@@ -322,7 +322,7 @@ class AuthenticatorApp(Ice.Application):
         
         logging.info("Running Authenticator application")
         comm = self.communicator()
-        self.adapter = comm.createObjectAdapter("Authenticator")
+        self.adapter = comm.createObjectAdapter("Authentication")
         self.adapter.activate()
 
         self.proxy = self.adapter.addWithUUID(self.servant)

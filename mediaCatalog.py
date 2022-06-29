@@ -336,7 +336,7 @@ class MediaCatalogApp(Ice.Application):
         
         logging.info("Running MediaCatalog application")
         comm = self.communicator()
-        self.adapter = comm.createObjectAdapter("MediaCatalog")
+        self.adapter = comm.createObjectAdapter("Catalog")
         self.adapter.activate()
 
         self.proxy = self.adapter.addWithUUID(self.servant)

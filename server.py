@@ -11,9 +11,7 @@
 # pylint: disable=W0613
 
 import random
-import sys
 import logging
-from main import Main
 
 import Ice
 import IceStorm
@@ -23,7 +21,6 @@ import IceFlix
 from service_announcement import ServiceAnnouncementsListener
 from service_announcement import ServiceAnnouncementsSender
 
-DEFAULT_TOPICMANAGER_PROXY = 'IceStorm/TopicManager:tcp -p 10000'
 
 class Services(Ice.Application):
     
@@ -38,6 +35,7 @@ class Services(Ice.Application):
         self.authServices = {}
         self.catalogServices = {}
         self.streamServices = {}
+        self.service_id = None
     
     def getMainService(self):
         
@@ -60,13 +58,13 @@ class Services(Ice.Application):
         return main_service
 
 
-class Server(Ice.Application):
+class ServerApp(Ice.Application):
 
     """ Ice.Application for a Server """
 
     def __init__(self):
         super().__init__()
-        self.servant = Main()
+        self.servant = Services()
         self.proxy = None
         self.adapter = None
         self.announcer = None
