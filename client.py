@@ -167,9 +167,9 @@ class Client(Ice.Application):
             catalog_proxy = main_Server.getCatalog()
             
         except IceFlix.TemporaryUnavailable:
-            
             logging.error('\n No hay ningún authenticator ni catálogo disponible')
-            self.manageConnect(exit, connect, login, main_Server, servant_Revocations)
+        
+        self.manageConnect(exit, connect, login, main_Server, servant_Revocations)
             
         if option[0] == "connect":
             print("\n Conectado")
@@ -261,7 +261,7 @@ class Client(Ice.Application):
                 elif includeAllTagsInput=="False":
                     includeAllTags=False
                 
-                media = catalog_proxy.getTilesByTags(tags,includeAllTags,servant_Revocations.client.userToken)
+                media = catalog_proxy.getTilesByTags(tags, includeAllTags, servant_Revocations.client.userToken)
                 
                 for i in range(len(media)):
                     print (media[i])
@@ -391,10 +391,24 @@ class Client(Ice.Application):
 
     def showOptionsConnect(self,current=None):
         print('''\n\n-----------------------------
-                \n\nAcciones disponibles:
-                \n\nconnect \nexit \nlogin
-                \nsearch \naddUser \nremoveUser
-                \n\n-----------------------------''')
+                    \n\nAcciones disponibles:
+                    \n\nconnect
+                    \nlogin
+                    \nsearch
+                    \naddUser
+                    \nremoveUser
+                    \nexit
+                    \n\n-----------------------------''')
 
     def showOptionsLogin(self, current=None):
-        print('''\n\n-----------------------------\nAvailable Options:\n\nexit logout addUser\nsearch tag_search removeUser\naddTags removeTags\n\n-----------------------------''')
+        print('''\n\n-----------------------------
+                    \n\nAcciones disponibles:
+                    \n\naddUser
+                    \nremoveUser
+                    \nsearch
+                    \naddTags
+                    \nremoveTags
+                    \ntag_search
+                    \nlogout
+                    \nexit
+                    \n\n-----------------------------''')

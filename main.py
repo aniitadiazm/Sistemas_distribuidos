@@ -13,7 +13,7 @@
 
 import logging
 import random
-
+import sys
 
 from service_announcement import ServiceAnnouncementsListener
 from service_announcement import ServiceAnnouncementsSender
@@ -23,7 +23,7 @@ import IceStorm
 Ice.loadSlice('IceFlix.ice')
 import IceFlix
 
-
+DEFAULT_TOPICMANAGER_PROXY = 'IceStorm/TopicManager:tcp -p 10000'
 
 TOKEN_ADMIN = "admin"
 
@@ -47,7 +47,7 @@ class Main(IceFlix.Main):
     def share_data_with(self, service):
         
         """ Share the current database with an incoming service """
-        
+        print("ejecuta")
         service.updateDB(None, self.service_id)
 
     def updateDB(self, values, service_id, current = None):  # pylint: disable=invalid-name,unused-argument
@@ -137,16 +137,15 @@ class MainApp(Ice.Application):
         """ Configure the announcements sender and listener """
 
         communicator = self.communicator()
-        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
-            communicator.propertyToProxy("IceStorm.TopicManager"),
-        )
+        proxy = communicator.stringToProxy(DEFAULT_TOPICMANAGER_PROXY)
+        topic_manager = IceStorm.TopicManagerPrx.checkedCast(proxy)
 
         try:
             topic = topic_manager.create("ServiceAnnouncements")
         
         except IceStorm.TopicExists:
             topic = topic_manager.retrieve("ServiceAnnouncements")
-
+        
         self.announcer = ServiceAnnouncementsSender(
             topic,
             self.servant.service_id,
@@ -180,4 +179,6 @@ class MainApp(Ice.Application):
 
         self.announcer.stop()
         return 0
-    
+
+if __name__ == "__main__":
+    sys.exit(MainApp().main(sys.argv))

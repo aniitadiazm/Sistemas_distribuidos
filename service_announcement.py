@@ -63,8 +63,19 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
         
         """ Receive the announcement of a new started service """
         
-        if service_id == self.service_id:
-            logging.debug("Received own announcement. Ignoring")
+        if service.ice_isA("::IceFlix::Authenticator"):
+            print("Authenticator registrado")
+            self.authenticators[service_id] = IceFlix.AuthenticatorPrx.uncheckedCast(service)
+            return
+        
+        if service.ice_isA("::IceFlix::Main"):
+            print("Main registrado")
+            self.mains[service_id] = IceFlix.AuthenticatorPrx.uncheckedCast(service)
+            return
+
+        if service.ice_isA("::IceFlix::MediaCatalog"):
+            print("Catalog registrado")
+            self.catalogs[service_id] = IceFlix.AuthenticatorPrx.uncheckedCast(service)
             return
 
         proxy = self.own_type.checkedCast(service)
@@ -73,11 +84,27 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
             logging.debug("New service isn't of my type. Ignoring")
             return
 
-        self.servant.share_data_with(proxy)
+        #self.servant.share_data_with(proxy)
 
     def announce(self, service, service_id, current):  # pylint: disable=unused-argument
        
         """ Receive an announcement """
+        print("Se ejecuta announce")
+        if service.ice_isA("::IceFlix::Authenticator"):
+            print("Authenticator registrado")
+            self.authenticators[service_id] = IceFlix.AuthenticatorPrx.uncheckedCast(service)
+            return
+        print(self.authenticators)
+        if service.ice_isA("::IceFlix::Main"):
+            print("Main registrado")
+            self.mains[service_id] = IceFlix.AuthenticatorPrx.uncheckedCast(service)
+            return
+
+        if service.ice_isA("::IceFlix::MediaCatalog"):
+            print("Catalog registrado")
+            self.catalogs[service_id] = IceFlix.AuthenticatorPrx.uncheckedCast(service)
+            return
+
 
         if service_id == self.service_id or service_id in self.known_ids:
             logging.debug("Received own announcement or already known. Ignoring")
@@ -101,16 +128,16 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
         
         check = False
         
-        if service_type == "Main" and service_id in self.services.mainServices:
+        if service_type.ice_isA("::IceFlix::Main") and service_id in self.services.mainServices:
                 check = True
                 
-        if service_type == "Authenticator" and service_id in self.services.authServices:
+        if service_type.ice_isA("::IceFlix::Authenticator") and service_id in self.services.authServices:
                 check = True
                 
-        if service_type == "MediaCatalog" and service_id in self.services.catalogServices:
+        if service_type.ice_isA("::IceFlix::MediaCatalog") and service_id in self.services.catalogServices:
                 check = True
                 
-        if service_type == "StreamProvider" and service_id in self.services.streamServices:
+        if service_type.ice_isA("::IceFlix::StreamProvider") and service_id in self.services.streamServices:
                 check = True
                 
         return check
@@ -148,10 +175,10 @@ class ServiceAnnouncementsSender:
         """ Start sending the announcements """
         
         self.timer = None
-
         self.publisher.announce(self.proxy, self.service_id)
         self.timer = threading.Timer(10.0, self.announce)
         self.timer.start()
+        
 
     def stop(self):
        

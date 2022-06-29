@@ -36,6 +36,10 @@ class Services(Ice.Application):
         self.catalogServices = {}
         self.streamServices = {}
         self.service_id = None
+        self.proxy = None
+        self.adapter = None
+        self.announcer = None
+        self.subscriber = None
     
     def getMainService(self):
         
@@ -56,20 +60,7 @@ class Services(Ice.Application):
         
         main_service = IceFlix.MainPrx.checkedCast(randomMain)
         return main_service
-
-
-class ServerApp(Ice.Application):
-
-    """ Ice.Application for a Server """
-
-    def __init__(self):
-        super().__init__()
-        self.servant = Services()
-        self.proxy = None
-        self.adapter = None
-        self.announcer = None
-        self.subscriber = None
-
+    
     def setup_announcements(self):
         
         """ Configure the announcements sender and listener """
@@ -87,12 +78,12 @@ class ServerApp(Ice.Application):
 
         self.announcer = ServiceAnnouncementsSender(
             topic,
-            self.servant.service_id,
+            self.service_id,
             self.proxy,
         )
 
         self.subscriber = ServiceAnnouncementsListener(
-            self.servant, self.servant.service_id, IceFlix.MainPrx
+            self, self.service_id, IceFlix.MainPrx
         )
 
         subscriber_prx = self.adapter.addWithUUID(self.subscriber)
@@ -107,7 +98,7 @@ class ServerApp(Ice.Application):
         self.adapter = comm.createObjectAdapter("Server")
         self.adapter.activate()
 
-        self.proxy = self.adapter.addWithUUID(self.servant)
+        self.proxy = self.adapter.addWithUUID(self)
         print(self.proxy, flush = None)
 
         self.setup_announcements()
@@ -118,6 +109,68 @@ class ServerApp(Ice.Application):
 
         self.announcer.stop()
         return 0
+
+
+# class ServerApp(Ice.Application):
+
+#     """ Ice.Application for a Server """
+
+#     def __init__(self):
+#         super().__init__()
+#         self.servant = Services()
+#         self.proxy = None
+#         self.adapter = None
+#         self.announcer = None
+#         self.subscriber = None
+
+#     def setup_announcements(self):
+        
+#         """ Configure the announcements sender and listener """
+
+#         communicator = self.communicator()
+#         topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+#             communicator.propertyToProxy("IceStorm.TopicManager"),
+#         )
+
+#         try:
+#             topic = topic_manager.create("ServiceAnnouncements")
+        
+#         except IceStorm.TopicExists:
+#             topic = topic_manager.retrieve("ServiceAnnouncements")
+
+#         self.announcer = ServiceAnnouncementsSender(
+#             topic,
+#             self.servant.service_id,
+#             self.proxy,
+#         )
+
+#         self.subscriber = ServiceAnnouncementsListener(
+#             self.servant, self.servant.service_id, IceFlix.MainPrx
+#         )
+
+#         subscriber_prx = self.adapter.addWithUUID(self.subscriber)
+#         topic.subscribeAndGetPublisher({}, subscriber_prx)
+
+#     def run(self, args):
+        
+#         """ Run the application, adding the needed objects to the adapter """
+        
+#         logging.info("Running Server application")
+#         comm = self.communicator()
+#         self.adapter = comm.createObjectAdapter("Server")
+#         self.adapter.activate()
+
+#         self.proxy = self.adapter.addWithUUID(self.servant)
+#         print(self.proxy, flush = None)
+
+#         self.setup_announcements()
+#         self.announcer.start_service()
+
+#         self.shutdownOnInterrupt()
+#         comm.waitForShutdown()
+
+#         self.announcer.stop()
+#         return 0
     
 
 

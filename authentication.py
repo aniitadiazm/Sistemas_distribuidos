@@ -11,13 +11,14 @@
 # pylint: disable=C0413
 # pylint: disable=W0613
 
-
+import sys
 import os
 import string
 import json
 import logging
 import random
 import threading
+import uuid
 
 from service_announcement import ServiceAnnouncementsListener
 from service_announcement import ServiceAnnouncementsSender
@@ -36,7 +37,6 @@ USERS_FILE = 'users.json'
 
 TOKEN_SIZE = 30
 
-TOPIC_MANAGER_PROXY = 'IceStorm/TopicManager:tcp -p 10000'
 
 def build_new_token():
 
@@ -57,7 +57,7 @@ class Authenticator(IceFlix.Authenticator):
         self._users_ = USERS_FILE
         self.users = IceFlix.UsersDB()
         self.active_tokens = {}
-        self.service_id = None
+        self.service_id = str(uuid.uuid4())
         self.services = Services()
         self.updatePublisher = None
         self.revocationsPublisher = None
@@ -192,16 +192,19 @@ class Authenticator(IceFlix.Authenticator):
     def updateDB(self, valuesDB, service_id, current = None):
 
         """ Actualiza la base de datos de la instancia con los usuarios más recientes """
-
+        
         logging.info("Recopilando la base de datos de %s para %s", service_id, self.service_id)
-
+        
         if self.ServiceAnnouncementsListener.validService_id(service_id, "Authenticator"):  # Si el servicio corresponde al Authenticator
             self.users = valuesDB  # Actualizar los usuarios
             print(self.users)
-        
+
         else:
             print("Error al obtener la base de datos")
+    
+    def share_data_with(self, proxy, current = None):
 
+        self.updateDB(None, None)
 
 class UserUpdates(IceFlix.UserUpdates):
     
@@ -293,10 +296,9 @@ class AuthenticatorApp(Ice.Application):
         """ Configure the announcements sender and listener """
 
         communicator = self.communicator()
-        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
-            communicator.propertyToProxy("IceStorm.TopicManager"),
-        )
-
+        proxy = communicator.stringToProxy(DEFAULT_TOPICMANAGER_PROXY)
+        topic_manager = IceStorm.TopicManagerPrx.checkedCast(proxy)
+        
         try:
             topic = topic_manager.create("ServiceAnnouncements")
         
@@ -310,7 +312,7 @@ class AuthenticatorApp(Ice.Application):
         )
 
         self.subscriber = ServiceAnnouncementsListener(
-            self.servant, self.servant.service_id, IceFlix.AuthPrx
+            self.servant, self.servant.service_id, IceFlix.AuthenticatorPrx
         )
 
         subscriber_prx = self.adapter.addWithUUID(self.subscriber)
@@ -326,12 +328,17 @@ class AuthenticatorApp(Ice.Application):
         self.adapter.activate()
 
         self.proxy = self.adapter.addWithUUID(self.servant)
-
+        
         self.setup_announcements()
         self.announcer.start_service()
+
 
         self.shutdownOnInterrupt()
         comm.waitForShutdown()
 
         self.announcer.stop()
         return 0
+    
+
+if __name__ == "__main__":
+    sys.exit(AuthenticatorApp().main(sys.argv))

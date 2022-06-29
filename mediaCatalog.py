@@ -14,12 +14,13 @@
 import json
 import os
 import logging
-
+import sys
 import Ice
 import IceStorm
 Ice.loadSlice('IceFlix.ice')
 import IceFlix
 
+DEFAULT_TOPICMANAGER_PROXY = 'IceStorm/TopicManager:tcp -p 10000'
 
 from server import Services
 from service_announcement import ServiceAnnouncementsListener
@@ -306,9 +307,8 @@ class MediaCatalogApp(Ice.Application):
         """ Configure the announcements sender and listener """
 
         communicator = self.communicator()
-        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
-            communicator.propertyToProxy("IceStorm.TopicManager"),
-        )
+        proxy = communicator.stringToProxy(DEFAULT_TOPICMANAGER_PROXY)
+        topic_manager = IceStorm.TopicManagerPrx.checkedCast(proxy)
 
         try:
             topic = topic_manager.create("ServiceAnnouncements")
@@ -348,4 +348,7 @@ class MediaCatalogApp(Ice.Application):
 
         self.announcer.stop()
         return 0
+
+if __name__ == "__main__":
+    sys.exit(MediaCatalogApp().main(sys.argv))
     
