@@ -1,10 +1,29 @@
 #!/usr/bin/python3 -u
 # -*- coding: utf-8 -*-
 
+# pylint: disable=C0103
+# pylint: disable=C0301
+# pylint: disable=C0113
+# pylint: disable=E0401
+# pylint: disable=C0103
+# pylint: disable=C0411
+# pylint: disable=C0413
+# pylint: disable=W0613
+
 import random
+import sys
+import logging
+from main import Main
+
 import Ice
-Ice.loadSlice('iceflix.ice')
+import IceStorm
+Ice.loadSlice('IceFlix.ice')
 import IceFlix
+
+from service_announcement import ServiceAnnouncementsListener
+from service_announcement import ServiceAnnouncementsSender
+
+DEFAULT_TOPICMANAGER_PROXY = 'IceStorm/TopicManager:tcp -p 10000'
 
 class Services(Ice.Application):
     
@@ -39,3 +58,68 @@ class Services(Ice.Application):
         
         main_service = IceFlix.MainPrx.checkedCast(randomMain)
         return main_service
+
+
+class Server(Ice.Application):
+
+    """ Ice.Application for a Server """
+
+    def __init__(self):
+        super().__init__()
+        self.servant = Main()
+        self.proxy = None
+        self.adapter = None
+        self.announcer = None
+        self.subscriber = None
+
+    def setup_announcements(self):
+        
+        """ Configure the announcements sender and listener """
+
+        communicator = self.communicator()
+        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+            communicator.propertyToProxy("IceStorm.TopicManager"),
+        )
+
+        try:
+            topic = topic_manager.create("ServiceAnnouncements")
+        
+        except IceStorm.TopicExists:
+            topic = topic_manager.retrieve("ServiceAnnouncements")
+
+        self.announcer = ServiceAnnouncementsSender(
+            topic,
+            self.servant.service_id,
+            self.proxy,
+        )
+
+        self.subscriber = ServiceAnnouncementsListener(
+            self.servant, self.servant.service_id, IceFlix.MainPrx
+        )
+
+        subscriber_prx = self.adapter.addWithUUID(self.subscriber)
+        topic.subscribeAndGetPublisher({}, subscriber_prx)
+
+    def run(self, args):
+        
+        """ Run the application, adding the needed objects to the adapter """
+        
+        logging.info("Running Server application")
+        comm = self.communicator()
+        self.adapter = comm.createObjectAdapter("Server")
+        self.adapter.activate()
+
+        self.proxy = self.adapter.addWithUUID(self.servant)
+        print(self.proxy, flush = None)
+
+        self.setup_announcements()
+        self.announcer.start_service()
+
+        self.shutdownOnInterrupt()
+        comm.waitForShutdown()
+
+        self.announcer.stop()
+        return 0
+    
+
+

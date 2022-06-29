@@ -15,18 +15,14 @@ import getpass
 import logging
 import time
 import Ice
+import IceStorm
 Ice.loadSlice('IceFlix.ice')
 import IceFlix
 
 
 from authentication import Revocations
 
-import IceStorm
 
-
-USER = ""
-CURRENT_TOKEN = 'current_token'
-PASSWORD_HASH = 'password_hash'
 DEFAULT_TOPICMANAGER_PROXY = 'IceStorm/TopicManager:tcp -p 10000'
      
             
@@ -81,7 +77,7 @@ class Client(Ice.Application):
         self.adapter = comm.createObjectAdapter("Client")
         self.adapter.activate()
 
-        self.proxy = self.adapter.addWithUUID(self.servant)
+        self.proxy = self.adapter.addWithUUID(self)
         
         servant_Revocations = Revocations()
         topic_Manager = self.get_topic_manager()
@@ -95,16 +91,12 @@ class Client(Ice.Application):
             
         topic_Revocations.subscribeAndGetPublisher({}, self.proxy)
         
-        self.setup_announcements()
-        self.announcer.start_service()
-
         self.showMain()
         self.manageMenu(False, False, False, None, servant_Revocations, self.adapter, topic_Manager)
 
         self.shutdownOnInterrupt()
         comm.waitForShutdown()
 
-        self.announcer.stop()
         return 0
 
     def showMain(self, current=None):
@@ -177,7 +169,7 @@ class Client(Ice.Application):
         except IceFlix.TemporaryUnavailable:
             
             logging.error('\n No hay ningún authenticator ni catálogo disponible')
-            self.manageOptionOnline(exit, online, login, main_Server)
+            self.manageConnect(exit, online, login, main_Server, servant_Revocations)
             
         if option[0] == "connect":
             print("\n Conectado")
@@ -390,7 +382,7 @@ class Client(Ice.Application):
                 exact=False
                 
         except Exception as e:
-            logging.error("\nBad input")
+            logging.error("\n Escribe True o False")
         media = catalog_proxy.getTilesByName(name, exact)
         
         if len(media)==0:

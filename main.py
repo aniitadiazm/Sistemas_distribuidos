@@ -13,12 +13,13 @@
 
 import logging
 import random
-import IceStorm
+
 
 from service_announcement import ServiceAnnouncementsListener
 from service_announcement import ServiceAnnouncementsSender
 
 import Ice
+import IceStorm
 Ice.loadSlice('IceFlix.ice')
 import IceFlix
 
@@ -39,6 +40,9 @@ class Main(IceFlix.Main):
         
         self.service_id = None
         self.ServiceAnnouncementsListener = None
+        self.volatileServices = IceFlix.VolatileServices()
+        self.volatileServices.authenticators = []
+        self.volatileServices.mediaCatalog = []
 
     def share_data_with(self, service):
         

@@ -24,6 +24,7 @@ from service_announcement import ServiceAnnouncementsSender
 from server import Services
 
 import Ice
+import IceStorm
 Ice.loadSlice('IceFlix.ice')
 import IceFlix
 

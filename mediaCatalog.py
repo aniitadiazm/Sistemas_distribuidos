@@ -195,8 +195,13 @@ class MediaCatalog(IceFlix.MediaCatalog):
     
     def updateDB(self, valuesDB, service_id, current = None):
 
-        """ Actualiza la base de datos de la instancia con los usuarios y tokens más recientes """
+        """ Recibe una estructura de datos con toda la base de datos existente en una instancia que estuviera funcionando anteriormente """
 
+        if self.serviceAnnouncements.validSrvid(service_id, "MediaCatalog"):
+            self._catalog_ = valuesDB
+
+        else:
+            print("Invalid origin")
         
 
 class Media(IceFlix.Media):
@@ -254,8 +259,8 @@ class CatalogUpdates(IceFlix.CatalogUpdates):
                         self.servant._tags_[media][user] = tags  # Creamos el usuario y añadimos las etiquetas
 
                     else:  # Si el usuario ya estaba en ese medio
-                        for tag in tags:  # Recorrer las etiquetas
-                            self.servant._tags_[media][user].append(tag)  # Añadírselas al usuario
+                        for tag in tags:  # Recorrer las etiquetas a añadir
+                            self.servant._tags_[media][user].append(tag)  # Añadir la etiqueta al usuario
 
             self.servant.commitChanges()  # Actualizar los cambios
         
@@ -267,7 +272,18 @@ class CatalogUpdates(IceFlix.CatalogUpdates):
         """ Se emite cuando un usuario elimina satisfactoriamente tags de algún medio """
         
         if self.ServiceAnnouncementsListener.validService_id(service_id, "MediaCatalog"):  # Si los ids de los servicios coinciden o el medio no se encuentra en el catálogo
+            
+            if user not in self.servant._tags_[media_id] or len(self.servant._tags_[media_id][user]) == 0:  # Si el usuario no se encuentra en ese medio
+                print("\n El usuario no tiene etiquetas")
 
+            else:
+
+                for media in self.servant._tags_:  # Recorrer los medios
+                    if media == media_id:  # Si los medios coinciden
+                        for tag in tags:  # Recorrer las etiquetas a eliminar
+                            self.servant._tags_[media][user].remove(tag)  # Eliminar la etiqueta del usuario
+
+                self.servant.commitChanges()
             
         
         else:
