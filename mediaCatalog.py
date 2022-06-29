@@ -128,28 +128,27 @@ class MediaCatalog(IceFlix.MediaCatalog):
         counter = 0
         check = False
 
-        if includeAllTags is True:
-            for media_id in self._tags_:
-                if user in self._tags_[media_id]: 
-                    for tag in self._tags_[media_id][user]:
-                        for tag_search in tags_search:
-                            if tag == tag_search:
-                                counter = counter+1
-                                if counter == len(self._tags_[user]):
-                                    list_to_return.append(media_id)
+        if includeAllTags is True:  # Si incluye todas las etiquetas
+            for media_id in self._tags_:  # Recorrer los medios
+                if user in self._tags_[media_id]:  # Si el usuario se encuentra en el medio
+                    for tag in self._tags_[media_id][user]:  # Para cada etiqueta del usuario
+                        for tag_search in tags_search:  # Para cada etiqueta a buscar
+                            if tag == tag_search:  # Si coinciden
+                                counter = counter + 1  # Aumentar el contador
+                                if counter == len(self._tags_[user]):  # Si la cantidad de etiquetas coincide con la cantidad de etiquetas del usuario 
+                                    list_to_return.append(media_id)  # Añadir a la lista el id del medio
 
-        else:
-            for media_id in self._tags_:
-                if user in self._tags_[media_id]:
-                    for tag in self._tags_[media_id][user]:
-                        for tag_search in tags_search:
-                            if tag == tag_search:
-                                id = media_id
-                                for id_search in list_to_return:
-                                    if id_search == id:
+        else:  # Si no incluye todas las etiquetas
+            for media_id in self._tags_:  # Recorrer los medios
+                if user in self._tags_[media_id]:  # Si el usuario se encuentra en el medio
+                    for tag in self._tags_[media_id][user]:  # Para cada etiqueta del usuario
+                        for tag_search in tags_search:  # Para cada etiqueta a buscar
+                            if tag == tag_search:  # Si coinciden
+                                for id_search in list_to_return:  # Recorremos la lista de los medios localizados
+                                    if id_search == media_id:  # Buscamos el id del medio para ver si ya está en la lista
                                         check = True
-                                if check == False:
-                                    list_to_return.append(media_id)
+                                if check is False:  # Si no está en la lista
+                                    list_to_return.append(media_id)  # Añadir medio a la lista
 
         return list_to_return
 
