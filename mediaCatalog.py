@@ -10,17 +10,17 @@
 # pylint: disable=C0413
 # pylint: disable=W0613
 
-from sqlalchemy import false
-import Ice
+
 import json
 import os
-import sqlite3
-import random
 import logging
+
+import Ice
 import IceStorm
 Ice.loadSlice('IceFlix.ice')
 import IceFlix
-from authentication import Authenticator
+
+
 from server import Services
 from service_announcement import ServiceAnnouncementsListener
 from service_announcement import ServiceAnnouncementsSender
@@ -199,82 +199,6 @@ class MediaCatalog(IceFlix.MediaCatalog):
 
         
 
-
-class CatalogDB():
-    
-    def __init__(self, database):
-        
-        self.database = database
-        
-    def build_connection(self, database):  # pylint: disable=no-self-use
-        
-        """ Contruye la conexión a la base de datos del catálogo """
-        
-        connection = sqlite3.connect(database)  # Acceder a la base de datos
-        connection.row_factory = lambda cursor, row: row[0]
-        return connection
-    
-    def in_catalog(self, media_id):
-        
-        """ Comprueba que un objeto media se encuentra en el catálogo """
-        
-        sql = f"SELECT * FROM catalog WHERE EXISTS (SELECT 1 FROM catalog WHERE id = '{media_id}');"
-        result = False
-            
-        with self.build_connection(self.database) as connection:  # Conectarse a la base de datos
-            cursor = connection.cursor()  # Crear un objeto de cursor
-            cursor.execute(sql)  # Ejecutar la consulta
-            
-            if cursor.fetchone():  # Si la consulta devuelve filas como resultado
-                result = True
-                
-        connection.close()
-        return result
-
-    def get_name_by_id(self, media_id):
-        
-        """ Obtiene el nombre de un objeto media a través de su id """
-        
-        get_by_name_sql = f"SELECT Name FROM catalog WHERE id = '{media_id}';"
-        
-        with self.build_connection(self.database) as connection:  # Conectarse a la base de datos
-            cursor = connection.cursor()  # Crear un objeto de cursor 
-            cursor.execute(get_by_name_sql)  # Ejecutar la consulta
-            result = cursor.fetchone()  # Guardar las filas que lance como resultado
-            
-        return result
-    
-    def get_id_by_name(self, name, exact):
-        
-        """ Obtiene el id de un objeto media a través de su nombre """
-        
-        if exact:
-            get_id_sql = f"SELECT id FROM catalog WHERE Name='{name}' COLLATE NOCASE"
-
-        else:
-            get_id_sql = f"SELECT id FROM catalog WHERE Name LIKE '%{name}%' COLLATE NOCASE"
-
-        with self.build_connection(self.database) as connection:  # Conectarse a la base de datos
-            cursor = connection.cursor()  # Crear un objeto de cursor
-            cursor.execute(get_id_sql)  # Ejecutar la consulta
-            result = cursor.fetchall()  # Guardar las filas que lance como resultado
-            
-        return result
-
-    def rename_media(self, name, media_id):
-        
-        """ Renombrar un objeto media del catálogo mediante su id"""
-        
-        rename_media_sql = f"UPDATE catalog SET Name='{name}' WHERE id='{media_id}'"
-        
-        with self.build_connection(self.database) as connection:  # Conectarse a la base de datos
-            cursor = connection.cursor()  # Crear un objeto de cursor
-            cursor.execute(rename_media_sql)  # Ejecutar la consulta
-            connection.commit()  # Modificar los datos de la base de datos
-            
-        connection.close()
-
-
 class Media(IceFlix.Media):
     
     """ Inicializar el objeto Media de IceFlix """
@@ -344,12 +268,7 @@ class CatalogUpdates(IceFlix.CatalogUpdates):
         
         if self.ServiceAnnouncementsListener.validService_id(service_id, "MediaCatalog"):  # Si los ids de los servicios coinciden o el medio no se encuentra en el catálogo
 
-            tags_db = read_tags_db()  # Leer las etiquetas de la base de datos
             
-            if user in tags_db and media_id in tags_db[user]:  # Si el usuario contiene las tags y el medio contiene las tags del usuario
-                tags_db[user][media_id] = [tag for tag in tags_db[user][media_id] if tag not in tags]
-
-            write_tags_db(tags_db)  # Escribir las tags
         
         else:
             print("El origen no corresponde al MediaCatalog")
