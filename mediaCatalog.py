@@ -158,24 +158,40 @@ class MediaCatalog(IceFlix.MediaCatalog):
         """ Permite añadir una lista de tags a un medio concreto """
 
         main_service = self.services.getMainService()
-        user = main_service.getAuthenticator().whois(token)
+        user = main_service.getAuthenticator().whois(token)  # Obtener el nombre de usuario
 
         check = False
 
-        for tags in self._tags_:
-            if self._tags_[media_id] == media_id:
+        for media in self._tags_:  # Recorrer los medios
+            if self._tags_[media] == media_id:  # Si se localiza el id del medio
                 check = True
         
         if check == False:
-            raise IceFlix.WrongMediaId
+            raise IceFlix.WrongMediaId  # Si no se localiza el id del medio salta excepción
 
-        self.catalogUpdate.addTags(media_id, tags, user, self.service_id)
+        self.catalogUpdate.addTags(media_id, tags, user, self.service_id)  # Añadir las etiquetas al medio y al usuario
     
     def renameTile(self, media_id, name, token, current=None): # pylint: disable=invalid-name, unused-argument
         
-        '''Renombra un medio.'''
+        """ Operación de administración que permite renombrar un determinado medio en la base de datos """
         
+        main_service = self.se.getMainService()
+
+        if main_service.isAdmin(token):  # Si el token es administrativo
+
+            check = False
+
+            for media in self._catalog_:  # Recorrer los medios
+                if media == media_id:  # Si los medios coinciden
+                    check = True
+            
+            if check == False:
+                raise IceFlix.WrongMediaId  # Si no se localiza el id del medio salta excepción
+
+            self.catalogUpdate.renameTile(media_id, name, self.service_id)  # Renombrar el medio
         
+        else:
+            raise IceFlix.Unauthorized()  # Si no es admin no está autorizado
     
     def updateDB(self, valuesDB, service_id, current = None):
 
@@ -292,12 +308,13 @@ class CatalogUpdates(IceFlix.CatalogUpdates):
         """ Se emite cuando el administrador modifica el nombre de un medio en una instancia """
         
         if self.ServiceAnnouncementsListener.validService_id(service_id, "MediaCatalog"):  # Si los ids de los servicios coinciden o el medio no se encuentra en el catálogo
-            
-            if media_id not in self.tags:  # Si no se encuentra el usuario
-                raise IceFlix.Unauthorized()
-            
-            self.servant.catalog.rename_media(media_id, name)  # Renombrar el medio a través de su id
-        
+
+            for media in self.servant._catalog_:  # Recorrer los medios
+                if media == media_id:  # Si los ids coinciden
+                    self.servant._catalog_[media] = name  # Asignar el nuevo nombre al medio
+
+            self.servant.commitChanges()  # Actualizar los cambios
+
         else:
             print("El origen no corresponde al MediaCatalog")
         
@@ -305,7 +322,7 @@ class CatalogUpdates(IceFlix.CatalogUpdates):
         
         """ Se emite cuando un usuario añade satisfactoriamente tags a algún medio """
         
-        if self.serviceAnnouncements.validSrvid(service_id, "MediaCatalog"):# Si los ids de los servicios coinciden o el medio no se encuentra en el catálogo
+        if self.ServiceAnnouncementsListener.validSrvid(service_id, "MediaCatalog"):  # Si los ids de los servicios coinciden o el medio no se encuentra en el catálogo
 
             for media in self.servant._tags_:  # Recorrer los medios
                 if media == media_id:  # Si los ids coinciden
