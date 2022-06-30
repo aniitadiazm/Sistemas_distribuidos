@@ -31,21 +31,12 @@ import IceFlix
 
 DEFAULT_TOPICMANAGER_PROXY = 'IceStorm/TopicManager:tcp -p 10000'
 
-USERS_FILE = 'users.json'
+USERS_FILE = "users.json"
 
 # pylint: enable=C0413
 
 TOKEN_SIZE = 30
 
-
-def build_new_token():
-
-    """ Construye un nuevo token """
-    
-    letters_digits = string.ascii_letters + string.digits  # Letras mayúsculas (A-Z), minúsculas (a-z) y números (0-9)
-    token = ''.join([random.choice(letters_digits) for _ in range(TOKEN_SIZE)])  # Seleccionando aleatoriamente, crear string de longitud 30
-   
-    return token
 
 
 class Authenticator(IceFlix.Authenticator):
@@ -59,15 +50,52 @@ class Authenticator(IceFlix.Authenticator):
         self.active_tokens = {}
         self.service_id = str(uuid.uuid4())
         self.services = Services()
-        self.updatePublisher = None
+       # self.updatePublisher = self.user_update_subscripcion()
         self.revocationsPublisher = None
         self.ServiceAnnouncementsListener = None
+        
 
-        if os.path.exists(USERS_FILE): 
+        if os.path.exists(USERS_FILE):
             self.refresh()  # Cargar los usuarios
             
         else:
             self.commitChanges()  # Recargar los cambios realizados sobre el almacén de datos
+    
+    # def user_update_subscripcion(self):
+
+    #     self.adapter = self.broker.createObjectAdapter("UserUpdatesAdapter")
+    #     self.adapter.activate()
+
+    #     proxy = self.communicator.stringToProxy(DEFAULT_TOPICMANAGER_PROXY)
+    #     topic_manager = IceStorm.TopicManagerPrx.checkedCast(proxy)
+
+    #     if not topic_manager:
+    #         raise ValueError(f"Proxy {proxy} no válido para TopicManager()")
+
+    #     try:
+    #         topic = topic_manager.retrieve("user_updates")
+
+    #     except IceStorm.NoSuchTopic:
+    #         topic = topic_manager.create("user_updates")
+     
+    #     update_subscriber = UserUpdates()
+    #     update_subscriber_proxy = adapter_user_updates.addWithUUID(update_subscriber)
+    #     topic.subscribeAndGetPublisher({}, update_subscriber_proxy)
+    #     update_publisher = topic.getPublisher()
+    #     update_publicador = IceFlix.UserUpdatesPrx.uncheckedCast(update_publisher)
+
+    #     return update_publicador
+    
+    def build_new_token(self):
+
+        """ Construye un nuevo token """
+        
+        return "".join(
+            [
+                random.choice(string.digits + string.ascii_letters)
+                for _ in range(TOKEN_SIZE)
+            ]
+        )
 
     def refresh(self):
         
@@ -90,32 +118,24 @@ class Authenticator(IceFlix.Authenticator):
     def refreshAuthorization(self, user, password_hash, current = None):
 
         """ Crea un nuevo token de autorización de usuario si las credenciales son válidas """
-
+        print("hola")
         logging.debug(f'Nuevo token solicitado por {user}')
         
-        # if user not in self.users:  # Si no se encuentra el usuario
-        #     raise IceFlix.Unauthorized()
-
-        # current_hash = self.users[user].values()  # Obtener la contraseña actual del usuario
-
-        # if not current_hash:  # Si la contraseña del usuario se encuentra vacía
-        #     raise IceFlix.Unauthorized()
-
-        # if current_hash != password_hash:  # Si las contraseñas no coinciden
-        #     raise IceFlix.Unauthorized()
-
-        # current_token = self.active_tokens[user]  # Obtener el token actual del usuario
+        password = password_hash
         
-        # if current_token:  # Si el token existe
-        #         self.active_tokens.pop(current_token)  # Lo eliminamos de los tokens activos
-        
-        # new_token = build_new_token()  # Construimos el nuevo token
+        with open(USERS_FILE) as file:
+            data = json.load(file)
+            
+            for name in data['users']:
+                
+                if user == name["user"] and password == name["password"]:
+                    self.active_tokens[name["user"]] = self.build_new_token()
 
-        # self.updatePublisher.newToken(user, new_token, self.service_id)  # Añadimos el nuevo token
-
-        # return new_token
-        return "metodo refresh auth"
-
+                #   self.updatePublisher.newToken(user, self.active_tokens[key])
+                    return self.active_tokens[name["user"]]
+            
+            raise IceFlix.Unauthorized()
+            
     def isAuthorized(self, user, current = None):
 
         """ Indica si un token dado es válido o no """
@@ -207,40 +227,37 @@ class Authenticator(IceFlix.Authenticator):
 
         self.updateDB(None, None)
 
-class UserUpdates(IceFlix.UserUpdates):
+# class UserUpdates(IceFlix.UserUpdates):
     
-    """ El servicio de autenticación recibe nuevos datos o actualizaciones a los ya existentes """
-    
-    def __init__(self):
+#     """ El servicio de autenticación recibe nuevos datos o actualizaciones a los ya existentes """
+ 
+#     def newUser(self, user, password_hash, service_id, current = None):
         
-        self.ServiceAnnouncementsListener = None
-        self.servant = None
-    
-    def newUser(self, user, password_hash, service_id, current = None):
+#         """ Se emite cuando un nuevo usuario es creado por el administrador """
         
-        """ Se emite cuando un nuevo usuario es creado por el administrador """
+#         # if self.ServiceAnnouncementsListener.validService_id(service_id, "Authenticator" ):  # Validar el id comprobando que sea Authenticator
+#         #     self.servant.users[user] = password_hash # Establecer los datos del usuario
+#         #     self.servant.commitChanges()  # Actualizar los cambios
         
-        if self.ServiceAnnouncementsListener.validService_id(service_id, "Authenticator" ):  # Validar el id comprobando que sea Authenticator
-            self.servant.users[user] = password_hash # Establecer los datos del usuario
-            self.servant.commitChanges()  # Actualizar los cambios
+#         # else:
+#         #     print("El origen no corresponde al Authenticator")
+#         print("new user")
         
-        else:
-            print("El origen no corresponde al Authenticator")
+#     def newToken(self, user, new_token, service_id, current = None):
         
-    def newToken(self, user, new_token, service_id, current = None):
+#         """ Se emite cuando un usuario llama satisfactoriamente a la función refreshAuthorization y un nuevo token es generado """
         
-        """ Se emite cuando un usuario llama satisfactoriamente a la función refreshAuthorization y un nuevo token es generado """
-        
-        if self.ServiceAnnouncementsListener.validService_id(service_id, "Authenticator" ):  # Validar el id comprobando que sea Authenticator
-            self.servant.active_tokens[user] = new_token  # Establecer el token del usuario
-            time = threading.Timer(120, self.servant.revocationsPublisher.revokeToken, [user, service_id]) # Eliminar el token del usuario pasados 2 minutos
-            time.start()
+#         if self.ServiceAnnouncementsListener.validService_id(service_id, "Authenticator" ):  # Validar el id comprobando que sea Authenticator
+#             self.servant.active_tokens[user] = new_token  # Establecer el token del usuario
+#             time = threading.Timer(120, self.servant.revocationsPublisher.revokeToken, [user, service_id]) # Eliminar el token del usuario pasados 2 minutos
+#             time.start()
             
-            print(self.servant.users)  # Mostrar los datos de los usuarios
+#             print(self.servant.users)  # Mostrar los datos de los usuarios
             
-        else:
-            print("El origen no corresponde al Authenticator")
-
+#         else:
+#             print("El origen no corresponde al Authenticator")
+     
+    
 
 class Revocations(IceFlix.Revocations):
     
@@ -322,7 +339,7 @@ class AuthenticatorApp(Ice.Application):
     def run(self, args):
         
         """ Run the application, adding the needed objects to the adapter """
-        print("hola")
+        
         logging.info("Running Authenticator application")
         comm = self.communicator()
         self.adapter = comm.createObjectAdapter("Authentication")
@@ -332,7 +349,6 @@ class AuthenticatorApp(Ice.Application):
         
         self.setup_announcements()
         self.announcer.start_service()
-
 
         self.shutdownOnInterrupt()
         comm.waitForShutdown()

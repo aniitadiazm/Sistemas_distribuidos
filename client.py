@@ -148,20 +148,20 @@ class Client(Ice.Application):
 
          while True:
             print(f"""\n-- MENÚ AUTHENTICATOR --\nSelecciona que desea hacer:\n1.- Crear nuevo token de autorizacion\n2.- Comprobar token
-            3.- Buscar usuario por TOKEN.\n4.- Añadir usuario\n5.- Eliminar usuario\n6.- Salir del menú autenticación\n""")
+        3.- Buscar usuario por TOKEN.\n4.- Añadir usuario\n5.- Eliminar usuario\n6.- Salir del menú autenticación\n""")
 
             choice = int(self.establecer_rango_opciones(1, 6))
     
             if choice == 1:
                 try:
-                #     self.user = input("\nIntroduce el usuario: ")
-                #     password = getpass("\nIntroduce la contraseña: ")
-                #     self.password_hash = hashlib.sha256(password.encode()).hexdigest()
+                    user = input("\nIntroduce el usuario: ")
+                    password = getpass("\nIntroduce la contraseña: ")
+                    password_hash = hashlib.sha256(password.encode()).hexdigest()
 
                 #     self.user_token = service.refreshAuthorization(self.user, self.password_hash)
-                #      self.publicador_revocation = self.suscripcion_user_revocations(self.user, self.password_hash)
+                #     self.publicador_revocation = self.suscripcion_user_revocations(self.user, self.password_hash)
                 #     print(f"\nTOKEN generado correctamente")
-                    print(service.refreshAuthorization(None, None))
+                    print(service.refreshAuthorization(user, password_hash))
 
                 except IceFlix.Unauthorized as ice_flix_error:
                     print(f"{ice_flix_error}\nUSUARIO no registrado")
