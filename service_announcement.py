@@ -101,6 +101,7 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
        
         """ Receive an announcement """
         
+        global main_proxy
         authenticators = []
         catalogs = []
         updateDB = False
@@ -119,6 +120,7 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
             print("Main registrado")
             self.mains[service_id] = IceFlix.MainPrx.uncheckedCast(service)
             self.main_id = service_id
+            main_proxy = self.mains[service_id]
             return
 
         if service.ice_isA("::IceFlix::MediaCatalog"):

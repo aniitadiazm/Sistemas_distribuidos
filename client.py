@@ -25,6 +25,7 @@ class Client(Ice.Application):
 
         self.main_service = None
         self.admin_token = None
+        self.user_token = None
 
     
     def comprobar_argumentos(self):
@@ -148,7 +149,7 @@ class Client(Ice.Application):
 
          while True:
             print(f"""\n-- MENÚ AUTHENTICATOR --\nSelecciona que desea hacer:\n1.- Crear nuevo token de autorizacion\n2.- Comprobar token
-        3.- Buscar usuario por TOKEN.\n4.- Añadir usuario\n5.- Eliminar usuario\n6.- Salir del menú autenticación\n""")
+3.- Buscar usuario por TOKEN.\n4.- Añadir usuario\n5.- Eliminar usuario\n6.- Salir del menú autenticación\n""")
 
             choice = int(self.establecer_rango_opciones(1, 6))
     
@@ -158,13 +159,53 @@ class Client(Ice.Application):
                     password = getpass("\nIntroduce la contraseña: ")
                     password_hash = hashlib.sha256(password.encode()).hexdigest()
 
-                #     self.user_token = service.refreshAuthorization(self.user, self.password_hash)
+                    self.user_token = service.refreshAuthorization(user, password_hash)
                 #     self.publicador_revocation = self.suscripcion_user_revocations(self.user, self.password_hash)
-                #     print(f"\nTOKEN generado correctamente")
-                    print(service.refreshAuthorization(user, password_hash))
+                    print(f"\nTOKEN generado correctamente")
 
                 except IceFlix.Unauthorized as ice_flix_error:
                     print(f"{ice_flix_error}\nUSUARIO no registrado")
+            
+            if choice == 2:
+                if service.isAuthorized(self.user_token):
+                    print(f"\nTOKEN válido")
+                
+                else:
+                    print(f"\nTOKEN no válido")
+            
+            if choice == 3:
+                try:
+                    user = service.whois(self.user_token)
+                    print(f"USUARIO asociado al TOKEN: {user}")
+
+                except IceFlix.Unauthorized as ice_flix_error:
+                    print(f"{ice_flix_error}\nTOKEN no válido")
+            
+            if choice == 4:
+                try:
+                    new_user = input("\nIntroduce el nuevo usuario: ")
+                    new_pass = getpass("\nIntroduce la contraseña: ")
+                    pass_hass = hashlib.sha256(new_pass.encode())
+                    service.addUser(new_user, pass_hass.hexdigest(), self.admin_token)
+                    print(f"\nUSUARIO añadido correctamente")
+
+                except IceFlix.Unauthorized as ice_flix_error:
+                    print(f"{ice_flix_error}\nUSUARIO no añadido correctamente")
+
+            if choice == 5:
+                try:
+                    user = input("\nIntroduce el usuario: ")
+                    service.removeUser(user, self.admin_token)
+                    print(f"\nUSUARIO eliminado correctamente")
+                
+                except IceFlix.Unauthorized as ice_flix_error:
+                    print(f"{ice_flix_error}\nUSUARIO no eliminado")
+            
+            if choice == 6:
+                print("\nSaliendo del Authenticator...")
+                break
+
+
 
 
         

@@ -33,6 +33,8 @@ DEFAULT_TOPICMANAGER_PROXY = 'IceStorm/TopicManager:tcp -p 10000'
 
 USERS_FILE = "users.json"
 
+main_proxy = None
+
 # pylint: enable=C0413
 
 TOKEN_SIZE = 30
@@ -136,79 +138,58 @@ class Authenticator(IceFlix.Authenticator):
             
             raise IceFlix.Unauthorized()
             
-    def isAuthorized(self, user, current = None):
+    def isAuthorized(self, token, current = None):
 
         """ Indica si un token dado es válido o no """
 
-        return True if user in self.active_tokens.keys() else False  # Comprobar si el token de un usuario se encuentra entre los tokens activos
+        return True if token in self.active_tokens.values() else False  # Comprobar si el token de un usuario se encuentra entre los tokens activos
 
     def whois(self, token, current = None):
 
         """ Permite descubrir el nombre del usuario a partir de un token válido """
+        
+        for value in self.active_tokens:
 
-        if token not in self.active_tokens.keys():  # Si el token no existe entre los tokens de los usuarios
-            raise IceFlix.Unauthorized
-
-        return self.active_tokens[token]  # Devolver el nombre de usuario correspondiente al token
+            if token == self.active_tokens[value]:
+                return value  # Devolver el nombre de usuario correspondiente al token
+            
+        raise IceFlix.Unauthorized
 
     def addUser(self, user, password_hash, admin, current = None):
 
         """ Permite añadir unas nuevas credenciales en el almacén de datos si el token administrativo es correcto """
-
-        active = False
-        while active is False:
-            if self.services.mainServices != {}:
-            
-                randomMain = random.choice(list(self.services.mainServices.values()))   # Seleccionar un aleatorio del diccionario
-                
-                try:
-                    randomMain.ice_ping()  # Comprobar que el objeto existe y recibe mensajes
-                    active = True
-                    
-                except:
-                    del self.services.mainServices[randomMain]  # Eliminar el objeto randomMain del diccionario
-            
-            else:
-                active = True
-                raise IceFlix.TemporaryUnavailable
-
-        checked = IceFlix.MainPrx.checkedCast(randomMain)  # Si el servidor está asociado a la interfaz devuelve el proxy, sino None
         
-        if checked.isAdmin(admin):  # Si el token administrativo es correcto
-            self.updatePublisher.newUser(user, password_hash, self.service_id)  # Crear el nuevo usuario en el almacén de datos
-            
-        else:
-            raise IceFlix.Unauthorized
+        check = False
+
+        with open(USERS_FILE) as file:
+            data = json.load(file)
+
+            for name in data['users']:
+
+                if user == name["user"]:
+                    print(f'El usuario {user} ya existe')
+                    check = True
+
+            if not check:
+                data['users'].append({"user": user, "password": password_hash})
+        
+        with open(USERS_FILE, "w") as file:
+            json.dump(data, file, indent = 4)
 
     def removeUser(self, user, admin, current = None):
 
         """ Permite eliminar unas credenciales del almacén de datos si el token administrativo es correcto """
 
-        active = False
-        while active is False:
-            if self.services.mainServices != {}:
-                
-                randomMain = random.choice(list(self.services.mainServices.values()))  # Seleccionar un aleatorio del diccionario
-                
-                try:
-                    randomMain.ice_ping()  # Comprobar que el objeto existe y recibe mensajes
-                    active = True
-                    
-                except:
-                    del self.services.mainServices[randomMain]   # Eliminar el objeto randomMain del diccionario
-            
-            else:
-                active = True
-                raise IceFlix.TemporaryUnavailable
+        with open(USERS_FILE) as file:
+            data = json.load(file)
+
+        for indice in range(len(data["users"])):
+
+                if data["users"][indice - 1]["user"] == user:
+                    del data["users"][indice - 1]
         
-        checked = IceFlix.MainPrx.checkedCast(randomMain)  # Si el servidor está asociado a la interfaz devuelve el proxy, sino None
-        
-        if checked.isAdmin(admin):  # Si el token administrativo es correcto
-            self.revocationsPublisher.revokeUser(user, self.service_id)  # Eliminar el usuario del almacén de datos
-        
-        else:
-            raise IceFlix.Unauthorized
-        
+        with open(USERS_FILE, "w") as file:
+            json.dump(data, file, indent = 4)      
 
     def updateDB(self, valuesDB, service_id, current = None):
 
