@@ -18,8 +18,6 @@ import logging
 import os
 import threading
 
-
-
 import Ice
 
 try:
@@ -67,6 +65,7 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
         self.known_ids = set()
         self.volatileServices = IceFlix.VolatileServices()
         self.main_id = None
+        self.users_db = None
 
     def newService(self, service, service_id, current):  # pylint: disable=invalid-name,unused-argument
         
@@ -75,7 +74,9 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
         if service.ice_isA("::IceFlix::Authenticator"):
             print("Authenticator registrado")
             self.authenticators[service_id] = IceFlix.AuthenticatorPrx.uncheckedCast(service)
-            #main_proxy.updateDB(self.volatileServices, service_id)
+            auth_proxy = self.authenticators[service_id]
+            auth_proxy.updateDB(self.users_db, service_id)
+            print(auth_proxy)
             return
         
         if service.ice_isA("::IceFlix::Main"):
@@ -86,7 +87,7 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
 
         if service.ice_isA("::IceFlix::MediaCatalog"):
             print("Catalog registrado")
-            self.catalogs[service_id] = IceFlix.MediaCatalogsPrx.uncheckedCast(service)
+            self.catalogs[service_id] = IceFlix.MediaCatalogPrx.uncheckedCast(service)
             return
 
         proxy = self.own_type.checkedCast(service)
@@ -94,8 +95,6 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
         if not proxy:
             logging.debug("New service isn't of my type. Ignoring")
             return
-
-        #self.servant.share_data_with(proxy)
 
     def announce(self, service, service_id, current):  # pylint: disable=unused-argument
        
@@ -126,6 +125,12 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
         if service.ice_isA("::IceFlix::MediaCatalog"):
             print("Catalog registrado")
             self.catalogs[service_id] = IceFlix.MediaCatalogPrx.uncheckedCast(service)
+            catalogs.append(IceFlix.MediaCatalogPrx.uncheckedCast(service))
+            self.volatileServices.mediaCatalogs = catalogs.copy()
+            main_proxy = self.mains.get(self.main_id)
+            if main_proxy is not None and updateDB is False:
+                main_proxy.updateDB(self.volatileServices, service_id)
+                updateDB = True
             return
 
 

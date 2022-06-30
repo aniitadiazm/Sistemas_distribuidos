@@ -17,7 +17,11 @@ Ice.loadSlice('IceFlix.ice')
 import IceFlix
 import sys
 import hashlib
+import time
+import threading
 from getpass import getpass
+
+DEFAULT_TOPICMANAGER_PROXY = 'IceStorm/TopicManager:tcp -p 10000'
 
 class Client(Ice.Application):
 
@@ -26,8 +30,10 @@ class Client(Ice.Application):
         self.main_service = None
         self.admin_token = None
         self.user_token = None
-
-    
+        self.user = None
+        self.password_hash = None
+        self.comm = None
+            
     def comprobar_argumentos(self):
 
         if len(sys.argv) != 3:
@@ -38,7 +44,7 @@ class Client(Ice.Application):
     
     def select_option(self, choice):
 
-        """Método que devulve un servicio en función de una opción."""
+        """ Método que devuelve un servicio en función de una opción """
 
         try:
             if choice == 1:
@@ -59,15 +65,9 @@ class Client(Ice.Application):
         self.comprobar_argumentos
         self.admin_token = argv[2]
         proxy = self.communicator().stringToProxy(argv[1])
-        
-        # try:
-        #     self.main_service = IceFlix.MainPrx.checkedCast(proxy)
-        #     if not self.main_service.isAdmin(self.admin_token):
-        #         sys.exit(1)
-
-
-        # except:
-        #     print(f"\n Servicio no disponible ")
+        self.comm = self.communicator()
+        self.revokePublisher = self.user_revocations_subscripcion()
+        threading.Thread(target=self.renovate_token, args=()).start()
 
         while True:
             if intentos != 0:
@@ -108,7 +108,7 @@ class Client(Ice.Application):
 
 
                 elif (choice == 2) and (service is not None):
-                    self.menu_catalog(service)
+                    print("servicio no implementado")
 
                 elif choice == 3:
                     sys.exit(0)
@@ -155,12 +155,11 @@ class Client(Ice.Application):
     
             if choice == 1:
                 try:
-                    user = input("\nIntroduce el usuario: ")
+                    self.user = input("\nIntroduce el usuario: ")
                     password = getpass("\nIntroduce la contraseña: ")
-                    password_hash = hashlib.sha256(password.encode()).hexdigest()
+                    self.password_hash = hashlib.sha256(password.encode()).hexdigest()
 
-                    self.user_token = service.refreshAuthorization(user, password_hash)
-                #     self.publicador_revocation = self.suscripcion_user_revocations(self.user, self.password_hash)
+                    self.user_token = service.refreshAuthorization(self.user, self.password_hash)
                     print(f"\nTOKEN generado correctamente")
 
                 except IceFlix.Unauthorized as ice_flix_error:
@@ -196,7 +195,6 @@ class Client(Ice.Application):
                 try:
                     user = input("\nIntroduce el usuario: ")
                     service.removeUser(user, self.admin_token)
-                    print(f"\nUSUARIO eliminado correctamente")
                 
                 except IceFlix.Unauthorized as ice_flix_error:
                     print(f"{ice_flix_error}\nUSUARIO no eliminado")
@@ -205,7 +203,37 @@ class Client(Ice.Application):
                 print("\nSaliendo del Authenticator...")
                 break
 
+    def user_revocations_subscripcion(self):
 
+        adapter = self.comm.createObjectAdapter("RevocationsAdapter")
+        adapter.activate()
+
+        proxy = self.comm.stringToProxy(DEFAULT_TOPICMANAGER_PROXY)
+        topic_manager = IceStorm.TopicManagerPrx.checkedCast(proxy)
+        
+        if not topic_manager:
+            raise ValueError(f"Proxy {proxy} no válido para TopicManager()")
+            
+        try:
+            topic = topic_manager.retrieve("user_revocations")
+
+        except IceStorm.NoSuchTopic:
+            topic = topic_manager.create("user_revocations")
+        
+        revoke_publisher = topic.getPublisher()
+        revoke_publicador = IceFlix.RevocationsPrx.uncheckedCast(revoke_publisher)
+
+        return revoke_publicador
+
+    def renovate_token(self):
+        
+        while True:
+            if self.user_token is not None:
+                time.sleep(120)
+                self.revokePublisher.revokeToken(self.user_token, self.user)
+                auth_proxy = self.main_service.getAuthenticator()
+                auth_proxy.refreshAuthorization(self.user, self.password_hash)
+                print("\nTOKEN renovado correctamente")      
 
 
         

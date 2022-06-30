@@ -87,7 +87,7 @@ class MediaCatalog(IceFlix.MediaCatalog):
             print(self.mediaProvider)
 
             if id in self.mediaProvider:  # Si el medio no tiene proxy asociado
-                object_media.provider=self.dicProvider[self.mediaProvider[id]]
+                object_media.provider = self.dicProvider[self.mediaProvider[id]]
 
             else:
                 raise IceFlix.TemporaryUnavailable

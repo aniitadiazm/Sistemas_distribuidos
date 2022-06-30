@@ -27,9 +27,6 @@ DEFAULT_TOPICMANAGER_PROXY = 'IceStorm/TopicManager:tcp -p 10000'
 
 TOKEN_ADMIN = "admin"
 
-authenticators = {}
-mediaCatalogs = {}
-
 
 class Main(IceFlix.Main):
     
@@ -44,10 +41,7 @@ class Main(IceFlix.Main):
         self.service_id = None
         self.ServiceAnnouncementsListener = None
         self.volatileServices = IceFlix.VolatileServices()
-       # self.volatileServices.authenticators = []
-       # self.volatileServices.mediaCatalog = []
-        
-
+     
     def share_data_with(self, service):
         
         """ Share the current database with an incoming service """
@@ -59,11 +53,12 @@ class Main(IceFlix.Main):
         """ Actualiza la base de datos de la instancia con los usuarios y tokens más recientes """
 
         self.volatileServices.authenticators = values.authenticators.copy()
+        print("authenticators")
         print(self.volatileServices.authenticators)
 
-        ##### HAY QUE RELLENAR EL MEDIA CATALOG!!!!!!!!!!!
-        
-
+        self.volatileServices.mediaCatalogs = values.mediaCatalogs.copy()
+        print("catalogs")
+        print(self.volatileServices.mediaCatalogs)
 
     def isAdmin(self, admin, current = None):
         
