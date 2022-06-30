@@ -1,10 +1,10 @@
-# -*- mode: bash -*-
+#!/bin/sh
 
-function start_icestorm {
-    mkdir -p /tmp/icestorm
-    icebox --Ice.Config=./configs/icebox.config &
-}
+icebox --Ice.Config=icebox.config &  
 
-start_icestorm
+gnome-terminal -- bash -c \
+	"python3 main.py --Ice.Config=configs/main.config; bash"
 
-# TODO: Launch all the services!
+
+gnome-terminal -- bash -c \
+        "python3 authentication.py --Ice.Config=configs/authentication.config; bash"
