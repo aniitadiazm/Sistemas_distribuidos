@@ -1,0 +1,3 @@
+# -*- mode: bash -*-
+
+gnome-terminal -- bash -c "./client.py"
