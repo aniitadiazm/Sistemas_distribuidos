@@ -93,27 +93,28 @@ class Authenticator(IceFlix.Authenticator):
 
         logging.debug(f'Nuevo token solicitado por {user}')
         
-        if user not in self.users:  # Si no se encuentra el usuario
-            raise IceFlix.Unauthorized()
+        # if user not in self.users:  # Si no se encuentra el usuario
+        #     raise IceFlix.Unauthorized()
 
-        current_hash = self.users[user].values()  # Obtener la contraseña actual del usuario
+        # current_hash = self.users[user].values()  # Obtener la contraseña actual del usuario
 
-        if not current_hash:  # Si la contraseña del usuario se encuentra vacía
-            raise IceFlix.Unauthorized()
+        # if not current_hash:  # Si la contraseña del usuario se encuentra vacía
+        #     raise IceFlix.Unauthorized()
 
-        if current_hash != password_hash:  # Si las contraseñas no coinciden
-            raise IceFlix.Unauthorized()
+        # if current_hash != password_hash:  # Si las contraseñas no coinciden
+        #     raise IceFlix.Unauthorized()
 
-        current_token = self.active_tokens[user]  # Obtener el token actual del usuario
+        # current_token = self.active_tokens[user]  # Obtener el token actual del usuario
         
-        if current_token:  # Si el token existe
-                self.active_tokens.pop(current_token)  # Lo eliminamos de los tokens activos
+        # if current_token:  # Si el token existe
+        #         self.active_tokens.pop(current_token)  # Lo eliminamos de los tokens activos
         
-        new_token = build_new_token()  # Construimos el nuevo token
+        # new_token = build_new_token()  # Construimos el nuevo token
 
-        self.updatePublisher.newToken(user, new_token, self.service_id)  # Añadimos el nuevo token
+        # self.updatePublisher.newToken(user, new_token, self.service_id)  # Añadimos el nuevo token
 
-        return new_token
+        # return new_token
+        return "metodo refresh auth"
 
     def isAuthorized(self, user, current = None):
 
@@ -321,7 +322,7 @@ class AuthenticatorApp(Ice.Application):
     def run(self, args):
         
         """ Run the application, adding the needed objects to the adapter """
-        
+        print("hola")
         logging.info("Running Authenticator application")
         comm = self.communicator()
         self.adapter = comm.createObjectAdapter("Authentication")

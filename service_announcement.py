@@ -30,6 +30,14 @@ except ImportError:
 
 
 
+class VolatileServices(IceFlix.VolatileServices):
+
+    def __init__(self):
+
+        self.authenticators = []
+        self.mediaCatalogs = []
+
+
 class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
    
     """ Listener for the ServiceAnnouncements topic """
@@ -57,7 +65,8 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
         self.catalogs = {}
         self.mains = {}
         self.known_ids = set()
-        
+        self.volatileServices = IceFlix.VolatileServices()
+        self.main_id = None
 
     def newService(self, service, service_id, current):  # pylint: disable=invalid-name,unused-argument
         
@@ -66,16 +75,18 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
         if service.ice_isA("::IceFlix::Authenticator"):
             print("Authenticator registrado")
             self.authenticators[service_id] = IceFlix.AuthenticatorPrx.uncheckedCast(service)
+            #main_proxy.updateDB(self.volatileServices, service_id)
             return
         
         if service.ice_isA("::IceFlix::Main"):
             print("Main registrado")
-            self.mains[service_id] = IceFlix.AuthenticatorPrx.uncheckedCast(service)
+            self.mains[service_id] = IceFlix.MainPrx.uncheckedCast(service)
+            self.main_id = service_id
             return
 
         if service.ice_isA("::IceFlix::MediaCatalog"):
             print("Catalog registrado")
-            self.catalogs[service_id] = IceFlix.AuthenticatorPrx.uncheckedCast(service)
+            self.catalogs[service_id] = IceFlix.MediaCatalogsPrx.uncheckedCast(service)
             return
 
         proxy = self.own_type.checkedCast(service)
@@ -89,20 +100,30 @@ class ServiceAnnouncementsListener(IceFlix.ServiceAnnouncements):
     def announce(self, service, service_id, current):  # pylint: disable=unused-argument
        
         """ Receive an announcement """
-        print("Se ejecuta announce")
+        
+        authenticators = []
+        catalogs = []
+        updateDB = False
+
         if service.ice_isA("::IceFlix::Authenticator"):
-            print("Authenticator registrado")
             self.authenticators[service_id] = IceFlix.AuthenticatorPrx.uncheckedCast(service)
+            authenticators.append(IceFlix.AuthenticatorPrx.uncheckedCast(service))
+            self.volatileServices.authenticators = authenticators.copy()
+            main_proxy = self.mains.get(self.main_id)
+            if main_proxy is not None and updateDB is False:
+                main_proxy.updateDB(self.volatileServices, service_id)
+                updateDB = True
             return
-        print(self.authenticators)
+        
         if service.ice_isA("::IceFlix::Main"):
             print("Main registrado")
-            self.mains[service_id] = IceFlix.AuthenticatorPrx.uncheckedCast(service)
+            self.mains[service_id] = IceFlix.MainPrx.uncheckedCast(service)
+            self.main_id = service_id
             return
 
         if service.ice_isA("::IceFlix::MediaCatalog"):
             print("Catalog registrado")
-            self.catalogs[service_id] = IceFlix.AuthenticatorPrx.uncheckedCast(service)
+            self.catalogs[service_id] = IceFlix.MediaCatalogPrx.uncheckedCast(service)
             return
 
 
@@ -179,7 +200,6 @@ class ServiceAnnouncementsSender:
         self.timer = threading.Timer(10.0, self.announce)
         self.timer.start()
         
-
     def stop(self):
        
         """ Stop sending the announcements """

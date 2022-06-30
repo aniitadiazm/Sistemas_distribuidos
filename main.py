@@ -27,6 +27,9 @@ DEFAULT_TOPICMANAGER_PROXY = 'IceStorm/TopicManager:tcp -p 10000'
 
 TOKEN_ADMIN = "admin"
 
+authenticators = {}
+mediaCatalogs = {}
+
 
 class Main(IceFlix.Main):
     
@@ -41,26 +44,26 @@ class Main(IceFlix.Main):
         self.service_id = None
         self.ServiceAnnouncementsListener = None
         self.volatileServices = IceFlix.VolatileServices()
-        self.volatileServices.authenticators = []
-        self.volatileServices.mediaCatalog = []
+       # self.volatileServices.authenticators = []
+       # self.volatileServices.mediaCatalog = []
+        
 
     def share_data_with(self, service):
         
         """ Share the current database with an incoming service """
-        print("ejecuta")
+        
         service.updateDB(None, self.service_id)
 
     def updateDB(self, values, service_id, current = None):  # pylint: disable=invalid-name,unused-argument
         
         """ Actualiza la base de datos de la instancia con los usuarios y tokens más recientes """
 
-        logging.info("Actualizando la base de datos de %s para %s", service_id, self.service_id)
+        self.volatileServices.authenticators = values.authenticators.copy()
+        print(self.volatileServices.authenticators)
 
-        if self.ServiceAnnouncementsListener.validService_id(service_id, "Main"):
-            self.volatileServices = values
+        ##### HAY QUE RELLENAR EL MEDIA CATALOG!!!!!!!!!!!
         
-        else:
-            print("El origen no corresponde al Main")
+
 
     def isAdmin(self, admin, current = None):
         
@@ -77,14 +80,13 @@ class Main(IceFlix.Main):
         
         active = False
         while active is False:
-            
-            if self.volatileServices.authenticators != []:
+
+            if len(self.volatileServices.authenticators) != 0:
                 randomAuth = random.choice(self.volatileServices.authenticators)  # Selecciona un aleatorio de la lista
                 
                 try:
                     randomAuth.ice_ping()  # Si el objeto existe y se le puede mandar un mensaje
-                    active = True
-                    
+
                 except:
                     self.volatileServices.authenticators.remove(randomAuth)
         
@@ -92,8 +94,7 @@ class Main(IceFlix.Main):
                 active = True
                 raise IceFlix.TemporaryUnavailable
         
-        checked = IceFlix.AuthenticatorPrx.checkedCast(randomAuth)  # Si el servidor está asociado a la interfaz devuelve el proxy, sino None
-        return checked
+            return randomAuth
     
     def getCatalog(self, current=None):
         
