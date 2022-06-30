@@ -1,3 +1,4 @@
+""" Client """
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-hashlib
 
@@ -11,10 +12,10 @@
 # pylint: disable=C0413
 # pylint: disable=W0613
 
-import Ice
+import Ice # pylint: disable=import-error,wrong-import-position
 import IceStorm
 Ice.loadSlice('IceFlix.ice')
-import IceFlix
+import IceFlix # pylint: disable=import-error,wrong-import-position
 import sys
 import hashlib
 import time
@@ -25,7 +26,9 @@ DEFAULT_TOPICMANAGER_PROXY = 'IceStorm/TopicManager:tcp -p 10000'
 
 class Client(Ice.Application):
 
-    def __init__(self):
+    """ Client Class """
+
+    def __init__(self): #pylint: disable=super-init-not-called
 
         self.main_service = None
         self.admin_token = None
@@ -33,15 +36,15 @@ class Client(Ice.Application):
         self.user = None
         self.password_hash = None
         self.comm = None
-            
-    def comprobar_argumentos(self):
+
+    def comprobar_argumentos(self): # pylint: disable=missing-function-docstring
 
         if len(sys.argv) != 3:
-            print(f"\n Número de argumentos incorrectos: "
+            print("\n Número de argumentos incorrectos: "
                 "python3 client.py <main_proxy> <admin_token>.\n")
 
             sys.exit(1)
-    
+
     def select_option(self, choice):
 
         """ Método que devuelve un servicio en función de una opción """
@@ -54,19 +57,19 @@ class Client(Ice.Application):
                 return self.main_service.getCatalog()
 
             else:
-                print(f"Saliendo...")
+                print("Saliendo...")
 
         except IceFlix.TemporaryUnavailable as ice_flix_error:
             print(f"{ice_flix_error}\nServicio no disponible.")
-    
-    def run(self, argv):
+
+    def run(self, argv): # pylint: disable=arguments-renamed
 
         intentos = 3
-        self.comprobar_argumentos
+        self.comprobar_argumentos # pylint:disable=pointless-statement
         self.admin_token = argv[2]
         proxy = self.communicator().stringToProxy(argv[1])
         self.comm = self.communicator()
-        self.revokePublisher = self.user_revocations_subscripcion()
+        self.revokePublisher = self.user_revocations_subscripcion() # pylint: disable=attribute-defined-outside-init
         threading.Thread(target=self.renovate_token, args=()).start()
 
         while True:
@@ -77,28 +80,27 @@ class Client(Ice.Application):
                     self.main_service.isAdmin(self.admin_token)
                     break
 
-                except:
+                except: # pylint: disable=bare-except
                     print("1")
-                    print(f"\nServicio no disponible ")
+                    print("\nServicio no disponible ")
                     print("2")
                     print(f"\nIntentos: {intentos} \n")
-                    # time.sleep(5)
 
                     try:
                         proxy_intento = input("\nIntroduce el proxy nuevamente: ")
                         proxy = self.communicator().stringToProxy(proxy_intento)
                         intentos = intentos - 1
 
-                    except:
-                        print(f"\nProxy no detectado ")
+                    except: # pylint: disable=bare-except
+                        print("\nProxy no detectado ")
 
             else:
-                print(f"\nConexión NO establecida.\n")
+                print("\nConexión NO establecida.\n")
                 sys.exit(1)
 
         while True:
             if self.main_service.isAdmin(self.admin_token):
-                print(f"\n TOKEN introducido CORRECTO")
+                print("\n TOKEN introducido CORRECTO")
 
                 choice = int(self.show_menu())
                 service = self.select_option(choice)
@@ -115,11 +117,11 @@ class Client(Ice.Application):
 
                 else:
                     print("Introduzca una opción válida.")
-                    
+
             else:
-                print(f"\n TOKEN introducido NO CORRECTO")
+                print("\n TOKEN introducido NO CORRECTO")
                 self.admin_token = input("Introduce un TOKEN válido: ")
-    
+
     def establecer_rango_opciones(self, mn, mx) -> int:
 
         """Método que comprueba que la opción del menú es un entero válido."""
@@ -140,19 +142,19 @@ class Client(Ice.Application):
         """Método que muestra el menú principal."""
 
         print(
-            f"""\n-- MENÚ PRINCIPAL --\n Selecciona que desea hacer: \n1.- Autenticarse en el sistema. \n2.- Catalogo del sistema. \n3.- Salir del sistema.\n"""
+            """\n-- MENÚ PRINCIPAL --\n Selecciona que desea hacer: \n1.- Autenticarse en el sistema. \n2.- Catalogo del sistema. \n3.- Salir del sistema.\n"""
         )
 
         return int(self.establecer_rango_opciones(1, 3))
-    
-    def menu_authentication(self, service):
 
-         while True:
-            print(f"""\n-- MENÚ AUTHENTICATOR --\nSelecciona que desea hacer:\n1.- Crear nuevo token de autorizacion\n2.- Comprobar token
+    def menu_authentication(self, service): # pylint: disable=missing-function-docstring
+
+        while True:
+            print("""\n-- MENÚ AUTHENTICATOR --\nSelecciona que desea hacer:\n1.- Crear nuevo token de autorizacion\n2.- Comprobar token
 3.- Buscar usuario por TOKEN.\n4.- Añadir usuario\n5.- Eliminar usuario\n6.- Salir del menú autenticación\n""")
 
             choice = int(self.establecer_rango_opciones(1, 6))
-    
+
             if choice == 1:
                 try:
                     self.user = input("\nIntroduce el usuario: ")
@@ -160,18 +162,18 @@ class Client(Ice.Application):
                     self.password_hash = hashlib.sha256(password.encode()).hexdigest()
 
                     self.user_token = service.refreshAuthorization(self.user, self.password_hash)
-                    print(f"\nTOKEN generado correctamente")
+                    print("\nTOKEN generado correctamente")
 
                 except IceFlix.Unauthorized as ice_flix_error:
                     print(f"{ice_flix_error}\nUSUARIO no registrado")
-            
+
             if choice == 2:
                 if service.isAuthorized(self.user_token):
-                    print(f"\nTOKEN válido")
-                
+                    print("\nTOKEN válido")
+
                 else:
-                    print(f"\nTOKEN no válido")
-            
+                    print("\nTOKEN no válido")
+
             if choice == 3:
                 try:
                     user = service.whois(self.user_token)
@@ -179,14 +181,14 @@ class Client(Ice.Application):
 
                 except IceFlix.Unauthorized as ice_flix_error:
                     print(f"{ice_flix_error}\nTOKEN no válido")
-            
+
             if choice == 4:
                 try:
                     new_user = input("\nIntroduce el nuevo usuario: ")
                     new_pass = getpass("\nIntroduce la contraseña: ")
                     pass_hass = hashlib.sha256(new_pass.encode())
                     service.addUser(new_user, pass_hass.hexdigest(), self.admin_token)
-                    print(f"\nUSUARIO añadido correctamente")
+                    print("\nUSUARIO añadido correctamente")
 
                 except IceFlix.Unauthorized as ice_flix_error:
                     print(f"{ice_flix_error}\nUSUARIO no añadido correctamente")
@@ -195,47 +197,46 @@ class Client(Ice.Application):
                 try:
                     user = input("\nIntroduce el usuario: ")
                     service.removeUser(user, self.admin_token)
-                
+
                 except IceFlix.Unauthorized as ice_flix_error:
                     print(f"{ice_flix_error}\nUSUARIO no eliminado")
-            
+
             if choice == 6:
                 print("\nSaliendo del Authenticator...")
                 break
 
-    def user_revocations_subscripcion(self):
+    def user_revocations_subscripcion(self): # pylint: disable=missing-function-docstring
 
         adapter = self.comm.createObjectAdapter("RevocationsAdapter")
         adapter.activate()
 
         proxy = self.comm.stringToProxy(DEFAULT_TOPICMANAGER_PROXY)
-        topic_manager = IceStorm.TopicManagerPrx.checkedCast(proxy)
-        
+        topic_manager = IceStorm.TopicManagerPrx.checkedCast(proxy) # pylint: disable=no-member
+
         if not topic_manager:
             raise ValueError(f"Proxy {proxy} no válido para TopicManager()")
-            
+
         try:
             topic = topic_manager.retrieve("user_revocations")
 
-        except IceStorm.NoSuchTopic:
+        except IceStorm.NoSuchTopic: # pylint: disable=no-member
             topic = topic_manager.create("user_revocations")
-        
+
         revoke_publisher = topic.getPublisher()
         revoke_publicador = IceFlix.RevocationsPrx.uncheckedCast(revoke_publisher)
 
         return revoke_publicador
 
-    def renovate_token(self):
-        
+    def renovate_token(self): # pylint: disable=missing-function-docstring
+
         while True:
             if self.user_token is not None:
                 time.sleep(120)
                 self.revokePublisher.revokeToken(self.user_token, self.user)
                 auth_proxy = self.main_service.getAuthenticator()
                 auth_proxy.refreshAuthorization(self.user, self.password_hash)
-                print("\nTOKEN renovado correctamente")      
+                print("\nTOKEN renovado correctamente")
 
 
-        
 if __name__ == "__main__":
     sys.exit(Client().main(sys.argv))
