@@ -1,4 +1,4 @@
-######Inscrucciones de ejecución
+##Instrucciones de ejecución
 
 Ejecutar “run_iceflix”
 
